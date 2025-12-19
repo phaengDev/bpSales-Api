@@ -12,7 +12,7 @@ interface ProductsAttributes {
   shopid?: number | null;
   images?: string | null;
   productName?: string | null;
-  brandid?: string | null;
+  brandid?: number | null;
   uniteid?: number | null;
   sizeid?: number | null;
   quantity?: number | null;
@@ -37,7 +37,7 @@ export class Products extends Model<ProductsAttributes, ProductsCreationAttribut
   public shopid!: number | null;
   public images!: string | null;
   public productName!: string | null;
-  public brandid!: string | null;
+  public brandid!: number | null;
   public uniteid!: number | null;
   public sizeid!: number | null;
   public quantity!: number | null;

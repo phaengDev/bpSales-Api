@@ -39,8 +39,8 @@ Brands.init(
       allowNull: true,
     },
     categorieid: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
+      type: DataTypes.INTEGER,
+      allowNull: false,
     },
     brandName: {
       type: DataTypes.STRING,

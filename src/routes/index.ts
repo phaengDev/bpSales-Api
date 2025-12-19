@@ -77,7 +77,8 @@ import {
   getCartOrder,
   updateCartPlus,
   updateCartMinus,
-  deleteCart
+  deleteCart,
+  addOrderBarcode
 } from "../controllers/addOrder";
 // ===== import order controller
 import {
@@ -111,10 +112,15 @@ import {
   getPrometionbypsid
 } from "../controllers/promotionController";
 // ===========
-import {createBillsale,createOnline,fetchSaleDaily,getsaleListbybill,getSalebyid,fetchSaleList,
+import {createBillsale,
+  createOnline,
+  fetchSaleDaily,
+  getsaleListbybill,
+  getSalebyid,
+  fetchSaleList,
   searchBillSale,
-cancleBillsale,
-fetchBillCancel} from "../controllers/billsaleController";
+  cancleBillsale,
+  fetchBillCancel} from "../controllers/billsaleController";
 import {getTransportation} from "../controllers/transonrtation";
 // ========== import billsale
 import {createImport,getImportAll} from "../controllers/importController";
@@ -212,6 +218,7 @@ router.get("/order/fetch/:id", getCartOrder);
 router.put("/order/plus/:id", updateCartPlus);
 router.put("/order/minus/:id", updateCartMinus);
 router.delete("/order/:id", deleteCart);
+router.post("/order/getsale", addOrderBarcode);
 // ======= Order import routes
 router.post("/cartimport/create", addorderImport);
 router.delete("/cartimport/:id", deleteCartImport);

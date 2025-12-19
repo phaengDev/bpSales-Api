@@ -164,9 +164,9 @@ export const getProductSales = async (req: Request<{}, {}, {}, QueryParams>, res
         if (brandid) {
             whereConditions.brandid = brandid;
         }
-        if (categorieid) {
-            whereConditions['$brand.categorieid$'] = categorieid;
-        }
+        // if (categorieid) {
+        //     whereConditions['$brand.categorieid$'] = categorieid;
+        // }
 
         const { rows, count } = await Products.findAndCountAll({
             where: whereConditions,
@@ -182,7 +182,12 @@ export const getProductSales = async (req: Request<{}, {}, {}, QueryParams>, res
                 {
                     model: Brands,
                     as: "brand",
-                }, {
+                    required: !!categorieid,
+                    where: categorieid
+                        ? { categorieid }
+                        : undefined
+                },
+                {
                     model: Units,
                     as: "unit",
                 },
@@ -359,11 +364,9 @@ export const getProductbySearch = async (req: Request, res: Response) => {
 export const getProductOptions = async (req: Request<{ id: string }>, res: Response) => {
     try {
         const categorieid = req.params.id;
-
         const whereConditions: any = {
             status: 1,
         };
-
         if (categorieid) {
             whereConditions["$brand.categorieid$"] = categorieid;
         }

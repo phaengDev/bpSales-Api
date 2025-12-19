@@ -5,7 +5,7 @@ import CartOrder from "../models/CartOrder";
 import Products from "../models/Products";
 import Units from "../models/Units";
 import Sizes from "../models/Sizes";
-import CartImport from "../models/CartImport";
+import Wholesale from "../models/Wholesale";
 
 export const addOrder = async (req: Request, res: Response) => {
     const t = await CartOrder.sequelize?.transaction(); // ✅ ใช้ optional chaining ป้องกัน undefined
@@ -82,7 +82,7 @@ export const updateCartPlus = async (
         }
 
         // Return the updated cart order object in the response
-        res.status(200).json({ message: "Update success", data:updated });
+        res.status(200).json({ message: "Update success", data: updated });
     } catch (error) {
         console.error("Error updating cart:", error);
         res.status(500).json({ message: "Error updating cart" });
@@ -114,7 +114,7 @@ export const updateCartMinus = async (
             }
         );
         const updated = await CartOrder.findByPk(id);
-        res.status(200).json({ message: "update success", data:updated });
+        res.status(200).json({ message: "update success", data: updated });
 
     } catch (error) {
         console.error("Error in cart:", error);
@@ -161,6 +161,7 @@ export const getCartOrder = async (req: Request<{ id: string }>, res: Response) 
                         "sellPrices",
                         [fn("CONCAT", literal(`'${url()}/product/'`), col("product.images")), "url"],
                     ],
+
                     include: [
                         {
                             model: Units,
@@ -172,6 +173,10 @@ export const getCartOrder = async (req: Request<{ id: string }>, res: Response) 
                             as: "size",
                             attributes: ["sizeName"],
                         },
+                        {
+                            model: Wholesale,
+                            as: "price",
+                        }
                     ],
                 },
             ],
@@ -189,4 +194,92 @@ export const getCartOrder = async (req: Request<{ id: string }>, res: Response) 
             detail: error.message || "Unknown error",
         });
     }
+};
+
+
+export const addOrderBarcode = async (req: Request, res: Response) => {
+  const t = await CartOrder.sequelize!.transaction();
+
+  try {
+    const new_uuid = await maxid(CartOrder, "cart_uuid");
+    req.body.cart_uuid = new_uuid;
+
+    const { shopsid, userbyid, barcode, quantity = 1 } = req.body as any;
+
+    if (!barcode || !userbyid || !shopsid) {
+      await t.rollback();
+      return res.status(400).json({ error: "Missing barcode, userbyid or shopsid" });
+    }
+
+    // ✅ FIX: barcode OR sku
+    const pos = await Products.findOne({
+      where: {
+        status: 1,
+        shopid: shopsid,
+        [Op.or]: [
+          { barcode },
+          { sku: barcode }
+        ]
+      },
+      transaction: t
+    });
+
+    if (!pos) {
+      await t.rollback();
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    const productid = pos.dataValues.product_uuid;
+    const salePrices = pos.dataValues.sellPrices;
+    // ✅ Check existing cart item
+    const existingOrder = await CartOrder.findOne({
+      where: { productid, userbyid },
+      transaction: t
+    });
+
+    let result;
+
+    if (existingOrder) {
+      await CartOrder.update(
+        {
+          quantity: Sequelize.literal(`quantity + ${Number(quantity)}`)
+        },
+        {
+          where: { productid, userbyid },
+          transaction: t
+        }
+      );
+
+      result = await CartOrder.findOne({
+        where: { productid, userbyid },
+        transaction: t
+      });
+    } else {
+      result = await CartOrder.create(
+        {
+          cart_uuid: new_uuid,
+          productid,
+          quantity,
+          salePrices,
+          userbyid,
+        },
+        { transaction: t }
+      );
+    }
+
+    await t.commit();
+
+    return res.status(200).json({
+      message: "Order saved successfully",
+      data: result
+    });
+  } catch (error: any) {
+    await t.rollback();
+    console.error("Error adding order:", error);
+
+    return res.status(500).json({
+      error: "Failed to add order",
+      detail: error.message || "Unknown error"
+    });
+  }
 };
