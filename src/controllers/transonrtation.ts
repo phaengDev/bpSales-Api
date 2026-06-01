@@ -3,6 +3,7 @@ import { Op, fn, col, literal, Sequelize, where } from "sequelize";
 import { maxid, maxCode, codeNo } from "../utils";
 import Transportation from "../models/Transportation";
 import Company from "../models/Company";
+import Provinces from "../models/Provinces";
 import moment from "moment";
 import Billsales from "../models/Billsales";
 interface QueryParams {
@@ -11,6 +12,33 @@ interface QueryParams {
     orderBy?: string;
     order?: string;
 }
+
+const toPlainObject = (value: any) => {
+    if (!value) return value;
+    return typeof value.toJSON === "function" ? value.toJSON() : value;
+};
+
+const formatTransportationDetails = (transport: any) => {
+    const item = toPlainObject(transport);
+    if (!item) return item;
+
+    const destinationBranchName = [
+        item.province?.provinceName,
+        item.branch_name,
+    ].filter(Boolean).join(" - ");
+
+    return {
+        ...item,
+        transport_company: item.company || null,
+        transport_company_name: item.company?.names || null,
+        destination_branch: {
+            province: item.province || null,
+            branch_name: item.branch_name || null,
+        },
+        destination_branch_name: destinationBranchName || null,
+    };
+};
+
 export const getTransportation = async (
     req: Request<{}, {}, {}, QueryParams>,
     res: Response
@@ -57,6 +85,10 @@ export const getTransportation = async (
                     model: Company,
                     as: "company",
                 },
+                {
+                    model: Provinces,
+                    as: "province",
+                },
             ],
         });
 
@@ -78,8 +110,10 @@ export const getTransportation = async (
 
 
 
+        const data = rows.map(formatTransportationDetails);
+
         res.status(200).json({
-            data: rows,
+            data,
             total: count,
             sums: sums || {},
             limit,

@@ -73,6 +73,49 @@ export const updatePrometion = async (req: Request, res: Response) => {
     }
 }
 
+export const updatePrometionStatus = async (req: Request, res: Response) => {
+    const t = await Promotion.sequelize?.transaction();
+    try {
+        const {items} = req.body as { items: any[] };
+        if (!Array.isArray(items) || items.length === 0) {
+            await t?.rollback();
+            return res.status(400).json({ error: "Request body must be a non-empty array" });
+        }
+
+        for (const item of items) {
+            if (!item?._uuid || item.status === undefined || item.status === null) {
+                await t?.rollback();
+                return res.status(400).json({ error: "Each item must include _uuid and status" });
+            }
+        }
+
+        const updated = await Promise.all(
+            items.map((item) =>
+                Promotion.update(
+                    {
+                        status: item.status,
+                        updatedAt: new Date(),
+                    },
+                    {
+                        where: { _uuid: item._uuid },
+                        transaction: t,
+                    }
+                )
+            )
+        );
+
+        await t?.commit();
+        res.status(200).json({
+            message: "Promotion status updated successfully",
+            data: items,
+            updated,
+        });
+    } catch (error) {
+        await t?.rollback();
+        res.status(500).json({ error: "Failed to update Promotion status" });
+    }
+}
+
 // ================ delete promotion ================
 export const deletePrometion = async (req: Request, res: Response) => {
     try {

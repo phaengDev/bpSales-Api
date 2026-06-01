@@ -56,12 +56,12 @@ Provinces.init(
 
 );
 // ✅ Sync model
-try {
-    Provinces.sync({ force: false });
-    console.log("✅ Provinces model synced");
-} catch (error) {
-    console.error("❌ Provinces model sync error:", error);
-}
+// try {
+//     Provinces.sync({ force: false });
+//     console.log("✅ Provinces model synced");
+// } catch (error) {
+//     console.error("❌ Provinces model sync error:", error);
+// }
 
 // ✅ Export model
 export default Provinces

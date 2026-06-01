@@ -26,6 +26,43 @@ interface QueryParams {
 }
 const days = moment(new Date()).format("DD").toString();
 const codes = moment(new Date()).format("YYMMDD").toString();
+
+const toPlainObject = (value: any) => {
+    if (!value) return value;
+    return typeof value.toJSON === "function" ? value.toJSON() : value;
+};
+
+const formatTransportDetails = (transport: any) => {
+    const item = toPlainObject(transport);
+    if (!item) return item;
+
+    const destinationBranchName = [
+        item.province?.provinceName,
+        item.branch_name,
+    ].filter(Boolean).join(" - ");
+
+    return {
+        ...item,
+        transport_company: item.company || null,
+        transport_company_name: item.company?.names || null,
+        destination_branch: {
+            province: item.province || null,
+            branch_name: item.branch_name || null,
+        },
+        destination_branch_name: destinationBranchName || null,
+    };
+};
+
+const formatBillsaleTransport = (billsale: any) => {
+    const item = toPlainObject(billsale);
+    if (!item) return item;
+
+    return {
+        ...item,
+        transport: formatTransportDetails(item.transport),
+    };
+};
+
 export const createBillsale = async (req: Request, res: Response) => {
     try {
         const { orderList } = req.body as any;
@@ -117,7 +154,7 @@ export const createOnline = async (req: Request, res: Response) => {
             } = req.body;
             const online_uuid = await maxid(Transportation, "_uuid");
             const newNo = await codeNo(Transportation, "codebill", `${codes}0`);
-            await Transportation.create(
+            const transportation = await Transportation.create(
                 {
                     _uuid: online_uuid,
                     shopid: shopid,
@@ -136,7 +173,13 @@ export const createOnline = async (req: Request, res: Response) => {
             );
 
             if (!billsale) return res.status(404).json({ error: "Billsale not found" });
-            res.status(200).json({ message: "Billsale created successfully", data: billsale, billid: new_uuid, onlineid: online_uuid });
+            res.status(200).json({
+                message: "Billsale created successfully",
+                data: billsale,
+                billid: new_uuid,
+                onlineid: online_uuid,
+                transportation,
+            });
         }
     } catch (error) {
         res.status(500).json({ error: "Failed to create Billsale" });
@@ -250,9 +293,42 @@ export const fetchSaleDaily = async (
             ],
         });
 
+        const summaryResult = await Billsales.findOne({
+            where: whereConditions,
+            attributes: [
+                [fn("SUM", col("balanceSale")), "balanceSale"],
+                [fn("SUM", col("balanceTotal")), "balanceTotal"],
+                [fn("SUM", col("taxBalance")), "taxBalance"],
+                [fn("SUM", col("discount")), "discount"],
+                [fn("SUM", col("balance_payable")), "balance_payable"],
+                [fn("SUM", col("getCash")), "getCash"],
+                [fn("SUM", col("getTransfer")), "getTransfer"],
+                [fn("SUM", col("balance_pays")), "balance_pays"],
+                [fn("SUM", col("refund")), "refund"],
+            ],
+            raw: true,
+        }) as unknown as Record<string, unknown> | null;
+
+        const toNumber = (value: unknown) => Number(value || 0);
+        const summary = {
+            bill_count: count,
+            balanceSale: toNumber(summaryResult?.balanceSale),
+            balanceTotal: toNumber(summaryResult?.balanceTotal),
+            taxBalance: toNumber(summaryResult?.taxBalance),
+            discount: toNumber(summaryResult?.discount),
+            balance_payable: toNumber(summaryResult?.balance_payable),
+            getCash: toNumber(summaryResult?.getCash),
+            getTransfer: toNumber(summaryResult?.getTransfer),
+            balance_pays: toNumber(summaryResult?.balance_pays),
+            refund: toNumber(summaryResult?.refund),
+        };
+
+        const data = rows.map(formatBillsaleTransport);
+
         res.status(200).json({
-            data: rows,
+            data,
             total: count,
+            summary,
             limit,
             skip
         });
@@ -309,10 +385,24 @@ export const getSalebyid = async (req: Request<{ id: string }>, res: Response) =
                             }
                         ]
                     }]
+                },
+                {
+                    model: Transportation,
+                    as: "transport",
+                    include: [
+                        {
+                            model: Provinces,
+                            as: "province"
+                        },
+                        {
+                            model: Company,
+                            as: "company"
+                        }
+                    ]
                 }
             ]
         });
-        res.status(200).json(result);
+        res.status(200).json(formatBillsaleTransport(result));
     } catch (error) {
         res.status(500).json({ error: "Failed to fetch Billsale" });
     }
@@ -483,6 +573,20 @@ export const searchBillSale = async (req: Request, res: Response) => {
                         },
                     ],
                 },
+                {
+                    model: Transportation,
+                    as: "transport",
+                    include: [
+                        {
+                            model: Provinces,
+                            as: "province"
+                        },
+                        {
+                            model: Company,
+                            as: "company"
+                        }
+                    ]
+                },
             ]
         });
 
@@ -490,7 +594,7 @@ export const searchBillSale = async (req: Request, res: Response) => {
         if (!result) {
             return res.status(404).json({ error: "BillSale not found" });
         }
-        res.status(200).json({ data: result });
+        res.status(200).json({ data: formatBillsaleTransport(result) });
     } catch (error) {
         res.status(500).json({ error: "Failed to fetch Billsale" });
     }
@@ -562,8 +666,10 @@ export const fetchBillCancel = async (
             ],
         });
 
+        const data = rows.map(formatBillsaleTransport);
+
         res.status(200).json({
-            data: rows,
+            data,
             total: count,
             limit,
             skip

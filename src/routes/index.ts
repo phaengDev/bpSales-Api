@@ -1,7 +1,9 @@
 import { Router } from "express";
 import {verifyToken, login } from "../middleware/auth";
 import { createUpload } from "../utils/uploadFile";
-import {getProvince, getDistrict, getCountry,getCompany} from "../controllers/addressController";
+import {getProvince, getDistrict, getCountry,
+  getCompany,
+getShops} from "../controllers/addressController";
 
 import {
   createUser,
@@ -78,7 +80,8 @@ import {
   updateCartPlus,
   updateCartMinus,
   deleteCart,
-  addOrderBarcode
+  addOrderBarcode,
+  updatePriceOrder
 } from "../controllers/addOrder";
 // ===== import order controller
 import {
@@ -105,6 +108,7 @@ import {
   createPrometion,
   createPrometionMt,
   updatePrometion,
+  updatePrometionStatus,
   deletePrometion,
   deletePrometionbyProduct,
   getPrometion,
@@ -137,6 +141,7 @@ router.get("/address/province", getProvince);
 router.get("/address/district/pv/:id", getDistrict);
 router.get("/address/country/:id", getCountry);
 router.get("/address/company", getCompany);
+router.get("/shop/:id",getShops);
 
 router.use(verifyToken);
 // ===== User routes
@@ -219,6 +224,7 @@ router.put("/order/plus/:id", updateCartPlus);
 router.put("/order/minus/:id", updateCartMinus);
 router.delete("/order/:id", deleteCart);
 router.post("/order/getsale", addOrderBarcode);
+router.put("/order/price/:id", updatePriceOrder);
 // ======= Order import routes
 router.post("/cartimport/create", addorderImport);
 router.delete("/cartimport/:id", deleteCartImport);
@@ -231,6 +237,7 @@ router.post("/promotion/fetch/", getPrometion);
 router.post("/promotion/many", getPrometionhasMany);
 router.post("/promotion/create", createPrometion);
 router.post("/promotion/create/mt", createPrometionMt);
+router.put("/promotion/status", updatePrometionStatus);
 router.put("/promotion/:id", updatePrometion);
 router.delete("/promotion/:id", deletePrometion);
 router.delete("/promotion/ps/:id", deletePrometionbyProduct);
