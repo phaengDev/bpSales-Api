@@ -68,10 +68,12 @@ import {
   createProduct, 
   updateProduct, 
   deleteProduct,
+  updatedStatus,
 getProductSales,
 getProductbyCategory,
 getProductbyBrand,
 getProductbySearch,
+SearchProductbysku,
 getProductOptions } from "../controllers/productController";
 // import order controller
 import {
@@ -195,10 +197,12 @@ router.post("/product/fetch", getProducts);
 router.post("/product/create", createUpload("product").single("images"), createProduct);
 router.put("/product/:id", createUpload("product").single("images"), updateProduct);
 router.delete("/product/:id", deleteProduct);
+router.put("/product/status/:id", updatedStatus);
 router.post("/product/sales", getProductSales);
 router.get("/product/category/:id", getProductbyCategory);
 router.get("/product/brand/category/:id", getProductbyBrand);
 router.post("/product/search", getProductbySearch);
+router.post('/product/search/sku',SearchProductbysku)
 router.get("/product/option/:id", getProductOptions);
 // === Import routes
 router.post("/import/create", createImport);

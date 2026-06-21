@@ -20,6 +20,7 @@ interface ProductsAttributes {
   sellPrices?: number | null;
   stock?: number | null;
   description?: string | null;
+  usage?: number | null;
   status?: number | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
@@ -31,23 +32,24 @@ type ProductsCreationAttributes = Optional<ProductsAttributes, "product_uuid">;
 
 export class Products extends Model<ProductsAttributes, ProductsCreationAttributes>
   implements ProductsAttributes {
-  public product_uuid!: number;
-  public sku!: string | null;
-  public barcode!: string | null;
-  public shopid!: number | null;
-  public images!: string | null;
-  public productName!: string | null;
-  public brandid!: number | null;
-  public uniteid!: number | null;
-  public sizeid!: number | null;
-  public quantity!: number | null;
-  public buyPrices!: number | null;
-  public sellPrices!: number | null;
-  public stock!: number | null;
-  public description!: string | null;
-  public status!: number | null;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  declare product_uuid: number;
+  declare sku: string | null;
+  declare barcode: string | null;
+  declare shopid: number | null;
+  declare images: string | null;
+  declare productName: string | null;
+  declare brandid: number | null;
+  declare uniteid: number | null;
+  declare sizeid: number | null;
+  declare quantity: number | null;
+  declare buyPrices: number | null;
+  declare sellPrices: number | null;
+  declare stock: number | null;
+  declare description: string | null;
+  declare usage: number | null;
+  declare status: number | null;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
 }
 
 // Define model
@@ -110,6 +112,11 @@ Products.init(
     description: {
       type: DataTypes.STRING(255),
       allowNull: true,
+    },
+    usage: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 1,
     },
     status: {
       type: DataTypes.INTEGER,

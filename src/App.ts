@@ -6,7 +6,6 @@ async function startServer() {
   try {
     await sequelize.authenticate();
     console.log("✅ Database connected!");
-
     app.listen(PORT, () => {
       console.log(`🚀 Server running at http://localhost:${PORT}`);
     });
@@ -14,5 +13,6 @@ async function startServer() {
     console.error("❌ Unable to connect to DB:", error);
   }
 }
+
 
 startServer();

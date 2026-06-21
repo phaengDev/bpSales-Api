@@ -71,10 +71,10 @@ export const deleteCartImportAll = async (
 // =========== createby sku ===========
 export const addorderImportSku = async (req: Request, res: Response) => {
     try {
-        const { sku, shopid, createbyid, status } = req.body;
+        const { sku, shopid, createbyid,status } = req.body;
 
         const product = await Products.findOne({
-            where: { sku, shopid, status: status }
+            where: { sku, shopid, status: 1 }
         });
 
         if (!product) {
@@ -84,7 +84,8 @@ export const addorderImportSku = async (req: Request, res: Response) => {
         const exists = await CartImport.findOne({
             where: {
                 productid: product.product_uuid,
-                userbyid: createbyid
+                userbyid: createbyid,
+                status:status
             }
         });
 

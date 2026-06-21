@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import e, { Request, Response } from "express";
 import { Op, fn, col, literal } from "sequelize";
 import { maxid, url } from "../utils";
 import { deleteFile } from "../utils/uploadFile";
@@ -80,7 +80,22 @@ export const deleteProduct = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Failed to delete product" });
     }
 };
-
+export const updatedStatus = async (req: Request<{ id: string }>, res: Response) => {
+    try {
+        const product_uuid = atob(req.params.id);
+        const product = await Products.findByPk(product_uuid);
+        if (!product) return res.status(404).json({ error: "Product not found" });
+        req.body.updatedAt = new Date();
+        const updated = await Products.update(req.body, {
+            where: { product_uuid: product_uuid },
+        });
+        if (!updated) return res.status(404).json({ error: "Product not found" });
+        res.status(200).json({ message: "Product updated successfully", data: updated });
+    }
+    catch (error) {
+        res.status(500).json({ error: "Failed to update product" });
+    }
+}
 // get product 
 export const getProducts = async (req: Request<{}, {}, {}, QueryParams>, res: Response) => {
     try {
@@ -332,6 +347,7 @@ export const getProductbySearch = async (req: Request, res: Response) => {
                 "product_uuid",
                 "productName",
                 "sku",
+                "barcode",
                 "buyPrices",
                 "sellPrices",
                 "quantity",
@@ -359,6 +375,58 @@ export const getProductbySearch = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Failed to fetch product" });
     }
 };
+
+
+export const SearchProductbysku = async (req: Request, res: Response) => {
+    try {
+        const { shopid, searchTerm } = req.body as any;
+
+        const whereConditions: any = {
+            status: 1,
+            shopid: shopid,
+        };
+
+        // ✅ ค้นทั้งชื่อสินค้า และรหัสสินค้า
+        if (searchTerm) {
+            whereConditions[Op.or] = [
+                { sku: { [Op.like]: `%${searchTerm}%` } },
+            ];
+        }
+
+        const product = await Products.findAll({
+            where: whereConditions,
+            attributes: [
+                "product_uuid",
+                "productName",
+                "sku",
+                "buyPrices",
+                "sellPrices",
+                "quantity",
+                "images",
+                [fn("CONCAT", literal(`'${url()}/product/'`), col("images")), "url"],
+            ],
+            include: [
+                {
+                    model: Brands,
+                    as: "brand",
+                    attributes: ["brandCode", "brandName", "categorieid"],
+                },
+                {
+                    model: Units,
+                    as: "unit",
+                    attributes: ["unitName"],
+                },
+            ],
+            order: [["product_uuid", "ASC"]],
+        });
+
+        res.status(200).json({ data: product });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to fetch product" });
+    }
+};
+
 
 
 export const getProductOptions = async (req: Request<{ id: string }>, res: Response) => {
