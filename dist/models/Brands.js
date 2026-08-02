@@ -22,8 +22,8 @@ Brands.init({
         allowNull: true,
     },
     categorieid: {
-        type: sequelize_1.DataTypes.STRING(255),
-        allowNull: true,
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: false,
     },
     brandName: {
         type: sequelize_1.DataTypes.STRING,

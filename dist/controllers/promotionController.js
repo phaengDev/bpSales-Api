@@ -3,12 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getPrometionbypsid = exports.getPrometionhasMany = exports.getPrometion = exports.deletePrometion = exports.updatePrometion = exports.createPrometionMt = exports.createPrometion = void 0;
+exports.getPrometionbypsid = exports.getPrometionhasMany = exports.getPrometion = exports.deletePrometionbyProduct = exports.deletePrometion = exports.updatePrometionStatus = exports.updatePrometion = exports.createPrometionMt = exports.createPrometion = void 0;
 const sequelize_1 = require("sequelize");
 const utils_1 = require("../utils");
 const Promotion_1 = __importDefault(require("../models/Promotion"));
 const Products_1 = __importDefault(require("../models/Products"));
 const Brands_1 = __importDefault(require("../models/Brands"));
+const Categories_1 = __importDefault(require("../models/Categories"));
 const Sizes_1 = __importDefault(require("../models/Sizes"));
 const Units_1 = __importDefault(require("../models/Units"));
 const createPrometion = async (req, res) => {
@@ -77,6 +78,40 @@ const updatePrometion = async (req, res) => {
     }
 };
 exports.updatePrometion = updatePrometion;
+const updatePrometionStatus = async (req, res) => {
+    const t = await Promotion_1.default.sequelize?.transaction();
+    try {
+        const { items } = req.body;
+        if (!Array.isArray(items) || items.length === 0) {
+            await t?.rollback();
+            return res.status(400).json({ error: "Request body must be a non-empty array" });
+        }
+        for (const item of items) {
+            if (!item?._uuid || item.status === undefined || item.status === null) {
+                await t?.rollback();
+                return res.status(400).json({ error: "Each item must include _uuid and status" });
+            }
+        }
+        const updated = await Promise.all(items.map((item) => Promotion_1.default.update({
+            status: item.status,
+            updatedAt: new Date(),
+        }, {
+            where: { _uuid: item._uuid },
+            transaction: t,
+        })));
+        await t?.commit();
+        res.status(200).json({
+            message: "Promotion status updated successfully",
+            data: items,
+            updated,
+        });
+    }
+    catch (error) {
+        await t?.rollback();
+        res.status(500).json({ error: "Failed to update Promotion status" });
+    }
+};
+exports.updatePrometionStatus = updatePrometionStatus;
 // ================ delete promotion ================
 const deletePrometion = async (req, res) => {
     try {
@@ -92,6 +127,18 @@ const deletePrometion = async (req, res) => {
     }
 };
 exports.deletePrometion = deletePrometion;
+// ================ delete promotion by product ================
+const deletePrometionbyProduct = async (req, res) => {
+    try {
+        const _uuid = atob(req.params.id);
+        await Promotion_1.default.destroy({ where: { productid: _uuid } });
+        res.status(200).json({ message: "Promotion deleted successfully" });
+    }
+    catch (error) {
+        res.status(500).json({ error: "Failed to delete Promotion" });
+    }
+};
+exports.deletePrometionbyProduct = deletePrometionbyProduct;
 // ===========get promotion ================
 const getPrometion = async (req, res) => {
     try {
@@ -157,43 +204,51 @@ const getPrometionhasMany = async (req, res) => {
     try {
         const limit = req.query.limit ? parseInt(req.query.limit, 10) : 10;
         const skip = req.query.skip ? parseInt(req.query.skip, 10) : 0;
-        const orderBy = req.query.orderBy || "_uuid";
+        const orderBy = req.query.orderBy || "product_uuid";
         const order = (req.query.order || "ASC").toUpperCase();
-        const { shopid, cartgoryid, brandid, sizeid } = req.body;
+        const { shopid } = req.body;
+        // ✅ เงื่อนไขกรองสินค้า
         const whereConditions = {};
         if (shopid)
             whereConditions.shopid = shopid;
-        if (cartgoryid)
-            whereConditions["$brand.categorieid$"] = cartgoryid;
-        if (brandid)
-            whereConditions.brandid = brandid;
-        if (sizeid)
-            whereConditions.sizeid = sizeid;
+        // ✅ ดึงเฉพาะสินค้าที่มีโปรโมชั่น
         const { rows, count } = await Products_1.default.findAndCountAll({
             where: whereConditions,
             limit,
             offset: skip,
             order: [[orderBy, order]],
+            attributes: {
+                include: [
+                    [(0, sequelize_1.fn)("CONCAT", (0, sequelize_1.literal)(`'${(0, utils_1.url)()}/product/'`), (0, sequelize_1.col)("images")), "url"],
+                ],
+            },
             include: [
                 {
                     model: Promotion_1.default,
-                    as: "promotion",
-                    required: true, // ✅ INNER JOIN only when promotion exists
-                    where: { status: 1 }, // ✅ optional – only active promotions
+                    as: "proms",
+                    required: true, // ✅ INNER JOIN — เอาเฉพาะสินค้าที่มีโปรโมชั่นจริง
+                    attributes: ["_uuid", "qty_buy", "qty_free", "status", "createdAt"],
                 },
                 {
                     model: Brands_1.default,
                     as: "brand",
-                },
-                {
-                    model: Sizes_1.default,
-                    as: "size",
+                    include: [
+                        {
+                            model: Categories_1.default,
+                            as: "category",
+                        },
+                    ],
                 },
                 {
                     model: Units_1.default,
                     as: "unit",
                 },
+                {
+                    model: Sizes_1.default,
+                    as: "size",
+                },
             ],
+            distinct: true, // ป้องกัน count ซ้ำเมื่อมีหลายโปรโมชั่น
         });
         res.status(200).json({
             data: rows,

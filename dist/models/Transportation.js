@@ -19,6 +19,14 @@ Transportation.init({
         autoIncrement: true,
         primaryKey: true,
     },
+    shopid: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: true,
+    },
+    codebill: {
+        type: sequelize_1.DataTypes.STRING(255),
+        allowNull: true,
+    },
     billsaleid: {
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: true,
@@ -48,6 +56,10 @@ Transportation.init({
         allowNull: true,
     },
     cod: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: true,
+    },
+    balance: {
         type: sequelize_1.DataTypes.DECIMAL(12, 2),
         allowNull: true,
     },
@@ -78,6 +90,7 @@ Transportation.init({
 });
 Transportation.belongsTo(Company_1.default, { foreignKey: "companyid", as: "company" });
 Transportation.belongsTo(Provinces_1.default, { foreignKey: "provinceid", as: "province" });
+Transportation.belongsTo(Billsales_1.default, { foreignKey: "billsaleid", as: "billsale" });
 Billsales_1.default.hasOne(Transportation, {
     foreignKey: "billsaleid",
     as: "transport"

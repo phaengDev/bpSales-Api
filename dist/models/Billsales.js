@@ -6,8 +6,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Billsales = void 0;
 const sequelize_1 = require("sequelize");
 const database_1 = require("../config/database");
-const Country_1 = __importDefault(require("./Country"));
+const Exchanges_1 = __importDefault(require("./Exchanges"));
 const Shops_1 = __importDefault(require("./Shops"));
+const Users_1 = __importDefault(require("./Users"));
 class Billsales extends sequelize_1.Model {
 }
 exports.Billsales = Billsales;
@@ -51,7 +52,7 @@ Billsales.init({
         type: sequelize_1.DataTypes.DECIMAL(12, 2),
         allowNull: true,
     },
-    countryid: {
+    exchangeid: {
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: true,
     },
@@ -88,13 +89,17 @@ Billsales.init({
         allowNull: true,
         defaultValue: 1,
     },
+    description: {
+        type: sequelize_1.DataTypes.STRING(255),
+        allowNull: true,
+    },
     statusoff: {
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: true,
         defaultValue: 1,
     },
     createby: {
-        type: sequelize_1.DataTypes.STRING(255),
+        type: sequelize_1.DataTypes.INTEGER,
         allowNull: true,
     },
     createdAt: {
@@ -114,6 +119,7 @@ Billsales.init({
     timestamps: true, // Sequelize auto manages createdAt / updatedAt
 });
 // export 
-Billsales.belongsTo(Country_1.default, { foreignKey: "countryid", as: "country" });
+Billsales.belongsTo(Exchanges_1.default, { foreignKey: "exchangeid", as: "exchange" });
 Billsales.belongsTo(Shops_1.default, { foreignKey: "shopid", as: "shop" });
+Billsales.belongsTo(Users_1.default, { foreignKey: "createby", as: "user" });
 exports.default = Billsales;

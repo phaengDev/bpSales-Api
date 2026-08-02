@@ -3,10 +3,11 @@ import { fn, col, literal } from 'sequelize';
 import { maxid, url } from "../utils";
 import CartOrder from "../models/CartOrder";
 import Products from "../models/Products";
-import Units from "../models/Units";
-import Sizes from "../models/Sizes";
+import Units from "../models/Units.controller";
+import Sizes from "../models/Sizes.controller";
 import Wholesale from "../models/Wholesale";
 import Promotion from "../models/Promotion";
+import { Toppings } from "../models/Toppings.model";
 
 const toNumber = (value: unknown, defaultValue = 0) => {
     const numberValue = Number(value);
@@ -123,23 +124,23 @@ export const addOrder = async (req: Request, res: Response) => {
         //         where: { productid, userbyid }, transaction: t,
         //     });
         // } else {
-            const salePrices = toNumber(req.body.salePrices);
-            const promotionValues = await buildCartPromotionValues({
-                productid: toNumber(productid),
-                paidQuantity: Math.max(toNumber(req.body.quantity, 1), 1),
-                salePrices,
-                transaction: t,
-            });
+        const salePrices = toNumber(req.body.salePrices);
+        const promotionValues = await buildCartPromotionValues({
+            productid: toNumber(productid),
+            paidQuantity: Math.max(toNumber(req.body.quantity, 1), 1),
+            salePrices,
+            transaction: t,
+        });
 
-            // ✅ สร้างสินค้าใหม่ใน cart
-          const  result = await CartOrder.create(
-                {
-                    ...req.body,
-                    ...promotionValues,
-                    salePrices,
-                },
-                { transaction: t }
-            );
+        // ✅ สร้างสินค้าใหม่ใน cart
+        const result = await CartOrder.create(
+            {
+                ...req.body,
+                ...promotionValues,
+                salePrices,
+            },
+            { transaction: t }
+        );
         // }
         await t?.commit();
         return res
@@ -300,8 +301,14 @@ export const getCartOrder = async (req: Request<{ id: string }>, res: Response) 
                         {
                             model: Wholesale,
                             as: "price",
-                        }
+                        },
                     ],
+                },
+
+                {
+                    model: Toppings,
+                    as: "topping",
+                    attributes: ["toppingName", "prices"],
                 },
             ],
         });
@@ -353,102 +360,101 @@ export const updatePriceOrder = async (req: Request<{ id: string }>, res: Respon
 
 
 export const addOrderBarcode = async (req: Request, res: Response) => {
-  const t = await CartOrder.sequelize!.transaction();
+    const t = await CartOrder.sequelize!.transaction();
 
-  try {
-    const new_uuid = await maxid(CartOrder, "cart_uuid");
-    req.body.cart_uuid = new_uuid;
+    try {
+        const new_uuid = await maxid(CartOrder, "cart_uuid");
+        req.body.cart_uuid = new_uuid;
 
-    const { shopsid, userbyid, barcode, quantity = 1 } = req.body as any;
+        const { shopsid, userbyid, barcode, quantity = 1 } = req.body as any;
 
-    if (!barcode || !userbyid || !shopsid) {
-      await t.rollback();
-      return res.status(400).json({ error: "Missing barcode, userbyid or shopsid" });
-    }
-
-    // ✅ Scan barcode only
-    const pos = await Products.findOne({
-      where: {
-        status: 1,
-        shopid: shopsid,
-        barcode
-      },
-      transaction: t
-    });
-
-    if (!pos) {
-      await t.rollback();
-      return res.status(404).json({ error: "Product not found" });
-    }
-
-    const productid = toNumber(pos.dataValues.product_uuid);
-    const salePrices = toNumber(pos.dataValues.sellPrices);
-    // ✅ Check existing cart item
-    const existingOrder = await CartOrder.findOne({
-      where: { productid, userbyid },
-      transaction: t
-    });
-
-    let result;
-
-    if (existingOrder) {
-      const paidQuantity = getPaidQuantity(existingOrder) + Math.max(toNumber(quantity, 1), 1);
-      const promotionValues = await buildCartPromotionValues({
-        productid: existingOrder.productid,
-        paidQuantity,
-        salePrices,
-        transaction: t,
-      });
-
-      await CartOrder.update(
-        {
-          ...promotionValues,
-          salePrices,
-          updatedAt: new Date(),
-        },
-        {
-          where: { productid, userbyid },
-          transaction: t
+        if (!barcode || !userbyid || !shopsid) {
+            await t.rollback();
+            return res.status(400).json({ error: "Missing barcode, userbyid or shopsid" });
         }
-      );
 
-      result = await CartOrder.findOne({
-        where: { productid, userbyid },
-        transaction: t
-      });
-    } else {
-      const promotionValues = await buildCartPromotionValues({
-        productid,
-        paidQuantity: Math.max(toNumber(quantity, 1), 1),
-        salePrices,
-        transaction: t,
-      });
+        // ✅ Scan barcode only
+        const pos = await Products.findOne({
+            where: {
+                status: 1,
+                shopid: shopsid,
+                barcode
+            },
+            transaction: t
+        });
 
-      result = await CartOrder.create(
-        {
-          cart_uuid: new_uuid,
-          productid,
-          ...promotionValues,
-          salePrices,
-          userbyid,
-        },
-        { transaction: t }
-      );
+        if (!pos) {
+            await t.rollback();
+            return res.status(404).json({ error: "Product not found" });
+        }
+
+        const productid = toNumber(pos.dataValues.product_uuid);
+        const salePrices = toNumber(pos.dataValues.sellPrices);
+        // ✅ Check existing cart item
+        const existingOrder = await CartOrder.findOne({
+            where: { productid, userbyid },
+            transaction: t
+        });
+
+        let result;
+        if (existingOrder) {
+            const paidQuantity = getPaidQuantity(existingOrder) + Math.max(toNumber(quantity, 1), 1);
+            const promotionValues = await buildCartPromotionValues({
+                productid: existingOrder.productid,
+                paidQuantity,
+                salePrices,
+                transaction: t,
+            });
+
+            await CartOrder.update(
+                {
+                    ...promotionValues,
+                    salePrices,
+                    updatedAt: new Date(),
+                },
+                {
+                    where: { productid, userbyid },
+                    transaction: t
+                }
+            );
+
+            result = await CartOrder.findOne({
+                where: { productid, userbyid },
+                transaction: t
+            });
+        } else {
+            const promotionValues = await buildCartPromotionValues({
+                productid,
+                paidQuantity: Math.max(toNumber(quantity, 1), 1),
+                salePrices,
+                transaction: t,
+            });
+
+            result = await CartOrder.create(
+                {
+                    cart_uuid: new_uuid,
+                    productid,
+                    ...promotionValues,
+                    salePrices,
+                    userbyid,
+                },
+                { transaction: t }
+            );
+        }
+
+        await t.commit();
+
+        return res.status(200).json({
+            message: "Order saved successfully",
+            data: result
+        });
+    } catch (error: any) {
+        await t.rollback();
+        console.error("Error adding order:", error);
+
+        return res.status(500).json({
+            error: "Failed to add order",
+            detail: error.message || "Unknown error"
+        });
     }
-
-    await t.commit();
-
-    return res.status(200).json({
-      message: "Order saved successfully",
-      data: result
-    });
-  } catch (error: any) {
-    await t.rollback();
-    console.error("Error adding order:", error);
-
-    return res.status(500).json({
-      error: "Failed to add order",
-      detail: error.message || "Unknown error"
-    });
-  }
 };

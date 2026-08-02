@@ -1,8 +1,12 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PurchaseList = void 0;
 const sequelize_1 = require("sequelize");
 const database_1 = require("../config/database");
+const Products_1 = __importDefault(require("./Products"));
 class PurchaseList extends sequelize_1.Model {
 }
 exports.PurchaseList = PurchaseList;
@@ -12,6 +16,10 @@ PurchaseList.init({
         type: sequelize_1.DataTypes.INTEGER.UNSIGNED,
         autoIncrement: true,
         primaryKey: true,
+    },
+    purchaseid: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: true,
     },
     productid: {
         type: sequelize_1.DataTypes.INTEGER,
@@ -33,11 +41,11 @@ PurchaseList.init({
         type: sequelize_1.DataTypes.DECIMAL(12, 2),
         allowNull: true,
     },
-    quantity_order: {
+    qty_order: {
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: true,
     },
-    quantity_import: {
+    qty_import: {
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: true,
     },
@@ -70,4 +78,5 @@ PurchaseList.init({
     modelName: "PurchaseList",
     timestamps: true, // Sequelize auto manages createdAt / updatedAt
 });
+PurchaseList.belongsTo(Products_1.default, { foreignKey: "productid", as: "product" });
 exports.default = PurchaseList;

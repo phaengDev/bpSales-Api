@@ -6,6 +6,10 @@ import {getProvince, getDistrict, getCountry,
 getShops} from "../controllers/addressController";
 
 import {
+  getExchange,updateExchange
+} from "../controllers/exchangeController";
+
+import {
   createUser,
   updateUser,
   deleteUser,
@@ -141,7 +145,7 @@ router.post("/auth/login", login);
 
 router.get("/address/province", getProvince);
 router.get("/address/district/pv/:id", getDistrict);
-router.get("/address/country/:id", getCountry);
+router.get("/address/country", getCountry);
 router.get("/address/company", getCompany);
 router.get("/shop/:id",getShops);
 
@@ -153,6 +157,10 @@ router.post("/user/create", createUser);
 router.put("/user/:id", updateUser);
 router.delete("/user/:id", deleteUser);
 router.get("/user/option/:id", getUserOption);
+// ====================
+router.get("/exchange/fetch/:id", getExchange);
+router.put("/exchange/:id", updateExchange);
+
 // ====== Supplier routes
 router.get("/supplier/fetch/:id", getSupplier);
 router.get("/supplier/option/:id", getSupplierOption);

@@ -3,15 +3,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CartImport = void 0;
+exports.Toppings = void 0;
 const sequelize_1 = require("sequelize");
 const database_1 = require("../config/database");
 const Products_1 = __importDefault(require("./Products"));
-class CartImport extends sequelize_1.Model {
+class Toppings extends sequelize_1.Model {
 }
-exports.CartImport = CartImport;
+exports.Toppings = Toppings;
 // Define model
-CartImport.init({
+Toppings.init({
     _uuid: {
         type: sequelize_1.DataTypes.INTEGER.UNSIGNED,
         autoIncrement: true,
@@ -21,9 +21,14 @@ CartImport.init({
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: true,
     },
-    userbyid: {
-        type: sequelize_1.DataTypes.INTEGER,
+    toppingName: {
+        type: sequelize_1.DataTypes.STRING(255),
         allowNull: true,
+    },
+    prices: {
+        type: sequelize_1.DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+        defaultValue: 0,
     },
     status: {
         type: sequelize_1.DataTypes.INTEGER,
@@ -42,9 +47,14 @@ CartImport.init({
     },
 }, {
     sequelize: database_1.sequelize,
-    tableName: "tbl_cart_import",
-    modelName: "CartImport",
+    tableName: "tbl_toppings",
+    modelName: "Toppings",
     timestamps: true, // Sequelize auto manages createdAt / updatedAt
 });
-CartImport.belongsTo(Products_1.default, { foreignKey: "productid", as: "product" });
-exports.default = CartImport;
+async function sync() {
+    await Toppings.sync();
+}
+sync();
+Toppings.belongsTo(Products_1.default, { foreignKey: "productid", as: "product" });
+Products_1.default.hasMany(Toppings, { foreignKey: "productid", as: "toppings" });
+exports.default = Toppings;

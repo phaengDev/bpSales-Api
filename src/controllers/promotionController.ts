@@ -5,8 +5,8 @@ import Promotion from "../models/Promotion";
 import Products from "../models/Products";
 import Brands from "../models/Brands";
 import Categories from "../models/Categories";
-import Sizes from "../models/Sizes";
-import Units from "../models/Units";
+import Sizes from "../models/Sizes.controller";
+import Units from "../models/Units.controller";
 interface QueryParams {
     limit?: string;
     skip?: string;

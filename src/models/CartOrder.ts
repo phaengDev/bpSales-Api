@@ -1,10 +1,12 @@
 import { DataTypes, Model, Optional } from "sequelize";
 import {sequelize} from "../config/database";
 import Products from "./Products";
+import Toppings from "./Toppings.model";
 // Define the attributes interface
 interface CartOrderAttributes {
   cart_uuid: number;
   productid?: number | null;
+  toppingid?: number | null;
   quantity?: number | null;
   promotion?: number | null;
   salePrices?: number | null;
@@ -22,6 +24,7 @@ export class CartOrder extends Model<CartOrderAttributes, CartOrderCreationAttri
   implements CartOrderAttributes {
   public cart_uuid!: number;
   public productid!: number | null;
+  public toppingid!: number | null;
   public quantity!: number | null;
   public promotion!: number | null;
   public salePrices!: number | null;
@@ -41,6 +44,10 @@ CartOrder.init(
       primaryKey: true,
     },
     productid: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    toppingid: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
@@ -96,5 +103,9 @@ CartOrder.init(
 CartOrder.belongsTo(Products, {
   foreignKey: "productid",
   as: "product",
+})
+CartOrder.belongsTo(Toppings, {
+  foreignKey: "toppingid",
+  as: "topping",
 })
 export default CartOrder;

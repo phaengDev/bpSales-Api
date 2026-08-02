@@ -17,7 +17,6 @@ exports.Products = Products;
 Products.init({
     product_uuid: {
         type: sequelize_1.DataTypes.INTEGER.UNSIGNED,
-        autoIncrement: true,
         primaryKey: true,
     },
     sku: {
@@ -37,7 +36,7 @@ Products.init({
         allowNull: true,
     },
     productName: {
-        type: sequelize_1.DataTypes.INTEGER,
+        type: sequelize_1.DataTypes.STRING(255),
         allowNull: true,
     },
     brandid: {
@@ -72,6 +71,11 @@ Products.init({
     description: {
         type: sequelize_1.DataTypes.STRING(255),
         allowNull: true,
+    },
+    usage: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 1,
     },
     status: {
         type: sequelize_1.DataTypes.INTEGER,

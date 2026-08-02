@@ -36,9 +36,19 @@ BillsaleList.init({
         allowNull: true,
         defaultValue: 1,
     },
+    discount: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0,
+    },
     quantity: {
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: true,
+    },
+    free: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0,
     },
     status: {
         type: sequelize_1.DataTypes.INTEGER,

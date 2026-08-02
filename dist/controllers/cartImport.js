@@ -1,32 +1,35 @@
-import { Request, Response } from "express";
-import { Sequelize, Op, fn, col, literal } from 'sequelize';
-import { maxid, url } from "../utils";
-import CartImport from "../models/CartImport";
-import Products from "../models/Products";
-import Units from "../models/Units.controller";
-import Sizes from "../models/Sizes.controller";
-
-
-export const addorderImport = async (req: Request, res: Response) => {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getCartImport = exports.addorderImportBarcode = exports.addorderImportSku = exports.deleteCartImportAll = exports.deleteCartImport = exports.addorderImport = void 0;
+const sequelize_1 = require("sequelize");
+const utils_1 = require("../utils");
+const CartImport_1 = __importDefault(require("../models/CartImport"));
+const Products_1 = __importDefault(require("../models/Products"));
+const Units_1 = __importDefault(require("../models/Units"));
+const Sizes_1 = __importDefault(require("../models/Sizes"));
+const addorderImport = async (req, res) => {
     try {
         const { items, userbyid, status } = req.body;
         for (const item of items) {
-            const check = await CartImport.findOne({
+            const check = await CartImport_1.default.findOne({
                 where: {
                     productid: item.productid,
                     userbyid: userbyid,
                     status: status
                 }
-            })
+            });
             if (!check) {
                 item.userbyid = userbyid;
                 item.status = status;
-                await CartImport.create(item);
+                await CartImport_1.default.create(item);
             }
         }
-
         res.status(200).json({ message: "Add order success", data: items });
-    } catch (error: any) {
+    }
+    catch (error) {
         console.error("❌ Error adding order:", error);
         return res.status(500).json({
             error: "Failed to add order",
@@ -34,76 +37,72 @@ export const addorderImport = async (req: Request, res: Response) => {
         });
     }
 };
-
-export const deleteCartImport = async (req: Request<{ id: string }>, res: Response) => {
+exports.addorderImport = addorderImport;
+const deleteCartImport = async (req, res) => {
     try {
         const id = req.params.id;
-        const deleted = await CartImport.destroy({ where: { _uuid: id } });
-        if (!deleted) return res.status(404).json({ error: "Order not found" });
+        const deleted = await CartImport_1.default.destroy({ where: { _uuid: id } });
+        if (!deleted)
+            return res.status(404).json({ error: "Order not found" });
         res.status(200).json({ message: "Order deleted successfully" });
-    } catch (error: any) {
+    }
+    catch (error) {
         console.error("❌ Error deleting order:", error);
         return res.status(500).json({
             error: "Failed to delete order",
             detail: error.message || "Unknown error",
         });
     }
-}
-
-export const deleteCartImportAll = async (
-    req: Request<{ id: string }, {}, {}, { status: string }>,
-    res: Response
-) => {
+};
+exports.deleteCartImport = deleteCartImport;
+const deleteCartImportAll = async (req, res) => {
     try {
         const id = req.params.id;
         const status = req.query.status;
-        const deleted = await CartImport.destroy({ where: { userbyid: id, status: status } });
-        if (!deleted) return res.status(404).json({ error: "Order not found" });
+        const deleted = await CartImport_1.default.destroy({ where: { userbyid: id, status: status } });
+        if (!deleted)
+            return res.status(404).json({ error: "Order not found" });
         res.status(200).json({ message: "Order deleted successfully" });
-    } catch (error: any) {
+    }
+    catch (error) {
         console.error("❌ Error deleting order:", error);
         return res.status(500).json({
             error: "Failed to delete order",
             detail: error.message || "Unknown error",
         });
     }
-}
+};
+exports.deleteCartImportAll = deleteCartImportAll;
 // =========== createby sku ===========
-export const addorderImportSku = async (req: Request, res: Response) => {
+const addorderImportSku = async (req, res) => {
     try {
-        const { sku, shopid, createbyid,status } = req.body;
-
-        const product = await Products.findOne({
+        const { sku, shopid, createbyid, status } = req.body;
+        const product = await Products_1.default.findOne({
             where: { sku, shopid, status: 1 }
         });
-
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
         }
-
-        const exists = await CartImport.findOne({
+        const exists = await CartImport_1.default.findOne({
             where: {
                 productid: product.product_uuid,
                 userbyid: createbyid,
-                status:status
+                status: status
             }
         });
-
         if (exists) {
             return res.status(409).json({ message: "Product already in cart" }); // ✔ FIX
         }
-
-        await CartImport.create({
+        await CartImport_1.default.create({
             productid: product.product_uuid,
             userbyid: createbyid
         });
-
         return res.status(200).json({
             message: "Add order success",
             data: product
         });
-
-    } catch (error: any) {
+    }
+    catch (error) {
         console.error("❌ Error adding order:", error);
         return res.status(500).json({
             message: "Failed to add order",
@@ -111,20 +110,18 @@ export const addorderImportSku = async (req: Request, res: Response) => {
         });
     }
 };
-
-
+exports.addorderImportSku = addorderImportSku;
 // =========== createby sku ===========
-export const addorderImportBarcode = async (req: Request, res: Response) => {
+const addorderImportBarcode = async (req, res) => {
     try {
         const { barcode, shopid, createbyid, status } = req.body;
-        const product = await Products.findOne({
+        const product = await Products_1.default.findOne({
             where: { barcode, shopid, status: status }
         });
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
         }
-
-        const exists = await CartImport.findOne({
+        const exists = await CartImport_1.default.findOne({
             where: {
                 productid: product.product_uuid,
                 userbyid: createbyid
@@ -133,17 +130,16 @@ export const addorderImportBarcode = async (req: Request, res: Response) => {
         if (exists) {
             return res.status(409).json({ message: "Product already in cart" }); // ✔ FIX
         }
-        await CartImport.create({
+        await CartImport_1.default.create({
             productid: product.product_uuid,
             userbyid: createbyid
         });
-
         return res.status(200).json({
             message: "Add order success",
             data: product
         });
-
-    } catch (error: any) {
+    }
+    catch (error) {
         console.error("❌ Error adding order:", error);
         return res.status(500).json({
             message: "Failed to add order",
@@ -151,21 +147,16 @@ export const addorderImportBarcode = async (req: Request, res: Response) => {
         });
     }
 };
-
-
-
-export const getCartImport =async (
-  req: Request<{ id: string }, {}, {}, { status: string }>,
-  res: Response
-) => {
+exports.addorderImportBarcode = addorderImportBarcode;
+const getCartImport = async (req, res) => {
     try {
         const userbyid = req.params.id;
-           const status = req.query.status;
-        const cartOrders = await CartImport.findAll({
+        const status = req.query.status;
+        const cartOrders = await CartImport_1.default.findAll({
             where: { userbyid, status: status },
             include: [
                 {
-                    model: Products,
+                    model: Products_1.default,
                     as: "product",
                     attributes: [
                         "product_uuid",
@@ -177,16 +168,16 @@ export const getCartImport =async (
                         "buyPrices",
                         "sellPrices",
                         "quantity",
-                        [fn("CONCAT", literal(`'${url()}/product/'`), col("product.images")), "url"],
+                        [(0, sequelize_1.fn)("CONCAT", (0, sequelize_1.literal)(`'${(0, utils_1.url)()}/product/'`), (0, sequelize_1.col)("product.images")), "url"],
                     ],
                     include: [
                         {
-                            model: Units,
+                            model: Units_1.default,
                             as: "unit",
                             attributes: ["unitName"],
                         },
                         {
-                            model: Sizes,
+                            model: Sizes_1.default,
                             as: "size",
                             attributes: ["sizeName"],
                         },
@@ -195,7 +186,8 @@ export const getCartImport =async (
             ],
         });
         res.status(200).json({ message: "Get order success", data: cartOrders });
-    } catch (error: any) {
+    }
+    catch (error) {
         console.error("❌ Error getting order:", error);
         return res.status(500).json({
             error: "Failed to get order",
@@ -203,4 +195,4 @@ export const getCartImport =async (
         });
     }
 };
-
+exports.getCartImport = getCartImport;

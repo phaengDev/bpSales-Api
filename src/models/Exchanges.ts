@@ -2,39 +2,43 @@ import { DataTypes, Model, Optional } from "sequelize";
 import {sequelize} from "../config/database";
 
 // Define the attributes interface
-interface CountryAttributes {
+interface ExchangesAttributes {
   _uuid: number;
-  names?: string | null;
+  shopid?: number | null;
   abbr?: string | null;
   icons?: string | null;
+  rate?: number | null;
+  genus?: string | null;
   status?: number | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
 }
 
-// Optional fields when creating a new Country
-type CountryCreationAttributes = Optional<CountryAttributes, "_uuid">;
+// Optional fields when creating a new Exchanges
+type ExchangesCreationAttributes = Optional<ExchangesAttributes, "_uuid">;
 
-export class Country extends Model<CountryAttributes, CountryCreationAttributes>
-  implements CountryAttributes {
+export class Exchanges extends Model<ExchangesAttributes, ExchangesCreationAttributes>
+  implements ExchangesAttributes {
   public _uuid!: number;
-  public names!: string | null;
+  public shopid!: number | null;
   public abbr!: string | null;
   public icons!: string | null;
+  public rate!: number | null;
+  public genus!: string | null;
   public status!: number | null;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
 
 // Define model
-Country.init(
+Exchanges.init(
   {
     _uuid: {
       type: DataTypes.INTEGER.UNSIGNED,
       autoIncrement: true,
       primaryKey: true,
     },
-    names: {
+    shopid: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
@@ -44,6 +48,14 @@ Country.init(
     },
     icons: {
       type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    rate: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    genus: {
+      type: DataTypes.STRING(10),
       allowNull: true,
     },
     status: {
@@ -64,10 +76,10 @@ Country.init(
   },
   {
     sequelize,
-    tableName: "tbl_country",
-    modelName: "Country",
+    tableName: "tbl_exchange",
+    modelName: "Exchanges",
     timestamps: true, // Sequelize auto manages createdAt / updatedAt
   }
 );
 
-export default Country;
+export default Exchanges;

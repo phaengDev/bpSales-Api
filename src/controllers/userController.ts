@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import Users from "../models/Users";
+import Users from "../models/Users.controller";
 import { maxid } from "../utils";
 // import jwt from "jsonwebtoken";
 const bcrypt = require('bcryptjs');

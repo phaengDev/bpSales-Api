@@ -3,7 +3,7 @@ import Provinces from "../models/Provinces";
 import District from "../models/Districts";
 import Country from "../models/Country";
 import Company from "../models/Company";
-import Shops from "../models/Shops";
+import Shops from "../models/Shops.controller";
 // ======== get province =======
 export const getProvince = async (req: Request, res: Response) => {
     try {
@@ -22,7 +22,6 @@ export const getProvince = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Failed to fetch provinces" });
     }
 };
-
 // ======== get district ======
 export const districtbyProvince = async (req: Request, res: Response) => {
     try {
@@ -47,15 +46,14 @@ export const getDistrict = async (req: Request, res: Response) => {
     }
 };
 
-export const getCountry = async (req: Request<{ id: string }>, res: Response) => {
+export const getCountry = async (req: Request, res: Response) => {
     try {
-        const shopid = req.params.id;
         const country = await Country.findAll(
             {
-                where: { shopid: shopid, status: 1 },
+                where: { status: 1 },
             }
         );
-        res.status(200).json(country);
+        res.status(200).json({data:country});
     } catch (error) {
         res.status(500).json({ error: "Failed to fetch country" });
     }
@@ -65,7 +63,7 @@ export const getCompany = async (req: Request, res: Response) => {
         const data = await Company.findAll();
         res.status(200).json(data);
     } catch (error) {
-        res.status(500).json({ error: "Failed to fetch country" });
+        res.status(500).json({ error: "Failed to fetch company" });
     }
 };
 

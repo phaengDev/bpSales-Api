@@ -12,7 +12,7 @@ const sequelize_1 = require("sequelize");
  * ສ້າງລະຫັດສິນຄ້າສຸ່ມ 7 ຕົວ ແລະກວດວ່າບໍ່ຊ້ຳພາຍໃນ shopid ເດີຍວກັນ
  * @param shopid number | string  — ລະຫັດຮ້ານ
  */
-async function generateBarCode(shopid) {
+async function generateBarCode(shopid, transaction) {
     let code;
     let exists = true;
     let tries = 0;
@@ -22,6 +22,7 @@ async function generateBarCode(shopid) {
         // ✅ ตรวจว่ามีใน DB หรือยัง
         const found = await Products_1.default.findOne({
             where: { barcode: code, shopid: shopid },
+            transaction,
         });
         exists = !!found;
         tries++;
@@ -30,7 +31,7 @@ async function generateBarCode(shopid) {
         throw new Error("Unable to generate unique product code after 10 tries");
     return code;
 }
-const maxsku = async (model, field, skuPrefix) => {
+const maxsku = async (model, field, skuPrefix, transaction) => {
     if (!skuPrefix)
         throw new Error("❌ SKU prefix is required");
     // 🔹 หา SKU ล่าสุดที่ขึ้นต้นด้วย prefix
@@ -39,6 +40,7 @@ const maxsku = async (model, field, skuPrefix) => {
             [field]: { [sequelize_1.Op.like]: `${skuPrefix}%` },
         },
         order: [[field, "DESC"]],
+        transaction,
     });
     // 🔹 ถ้ามีข้อมูลล่าสุด → ต่อท้าย +1
     let lastCode = lastRow ? lastRow.get(field) : null;

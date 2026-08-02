@@ -1,9 +1,9 @@
 // src/middleware/auth.ts
 import { Request, Response, NextFunction } from "express";
-import Users from "../models/Users";
+import Users from "../models/Users.controller";
 import bcrypt from "bcryptjs";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import Shops from "../models/Shops";
+import Shops from "../models/Shops.controller";
 // import TypeUser from "../models/typeUserModel";
 const JWT_SECRET = (process.env.JWT_SECRET ?? "Stock-Phaeng@2026").trim();
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1d";

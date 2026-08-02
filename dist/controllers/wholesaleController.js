@@ -32,32 +32,48 @@ const createPriceOne = async (req, res) => {
 };
 exports.createPriceOne = createPriceOne;
 const createPriceMt = async (req, res) => {
+    const t = await Wholesale_1.default.sequelize?.transaction();
     try {
         const { dataPrices, productid } = req.body;
         if (!Array.isArray(dataPrices) || dataPrices.length === 0) {
+            await t?.rollback();
             return res.status(400).json({ error: "Request body must be a non-empty array" });
         }
+        const results = [];
+        let nextPriceUuid = await (0, utils_1.maxid)(Wholesale_1.default, "price_uuid");
         for (const item of dataPrices) {
-            const new_uuid = await (0, utils_1.maxid)(Wholesale_1.default, "price_uuid");
+            if (item.price_uuid) {
+                const existingPrice = await Wholesale_1.default.findByPk(item.price_uuid, { transaction: t });
+                if (existingPrice) {
+                    const updated = await existingPrice.update({
+                        typeName: item.typeName,
+                        prices: item.prices,
+                        updatedAt: new Date(),
+                    }, { transaction: t });
+                    results.push(updated);
+                    continue;
+                }
+            }
             const price = await Wholesale_1.default.create({
-                price_uuid: new_uuid,
+                price_uuid: nextPriceUuid,
                 productid: productid,
                 typeName: item.typeName,
                 prices: item.prices,
                 status: 1,
                 createdAt: new Date(),
                 updatedAt: new Date(),
-            });
-            if (!price) {
-                return res.status(500).json({ error: "Failed to create Wholesale" });
-            }
+            }, { transaction: t });
+            results.push(price);
+            nextPriceUuid += 1;
         }
+        await t?.commit();
         return res.status(200).json({
-            message: "Wholesale created successfully",
-            data: dataPrices
+            message: "Wholesale saved successfully",
+            data: results
         });
     }
     catch (error) {
+        await t?.rollback();
         console.error("❌ createPriceMt error:", error);
         return res.status(500).json({ error: "Internal server error" });
     }

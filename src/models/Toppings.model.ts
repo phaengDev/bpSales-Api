@@ -1,50 +1,51 @@
 import { DataTypes, Model, Optional } from "sequelize";
 import {sequelize} from "../config/database";
-
+import Products from "./Products";
 // Define the attributes interface
-interface CountryAttributes {
+interface ToppingsAttributes {
   _uuid: number;
-  names?: string | null;
-  abbr?: string | null;
-  icons?: string | null;
+  productid?: number | null;
+  toppingName?: string | null;
+  prices?: number | null;
   status?: number | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
 }
 
-// Optional fields when creating a new Country
-type CountryCreationAttributes = Optional<CountryAttributes, "_uuid">;
+// Optional fields when creating a new Toppings
+type ToppingsCreationAttributes = Optional<ToppingsAttributes, "_uuid">;
 
-export class Country extends Model<CountryAttributes, CountryCreationAttributes>
-  implements CountryAttributes {
+export class Toppings extends Model<ToppingsAttributes, ToppingsCreationAttributes>
+  implements ToppingsAttributes {
   public _uuid!: number;
-  public names!: string | null;
-  public abbr!: string | null;
-  public icons!: string | null;
+  public productid!: number | null;
+  public toppingName!: string | null;
+  public prices!: number | null;
   public status!: number | null;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
 
 // Define model
-Country.init(
+Toppings.init(
   {
     _uuid: {
       type: DataTypes.INTEGER.UNSIGNED,
       autoIncrement: true,
       primaryKey: true,
     },
-    names: {
+    productid: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    abbr: {
-      type: DataTypes.STRING(10),
-      allowNull: true,
-    },
-    icons: {
+    toppingName: {
       type: DataTypes.STRING(255),
       allowNull: true,
+    },
+    prices: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      defaultValue: 0,
     },
     status: {
       type: DataTypes.INTEGER,
@@ -64,10 +65,17 @@ Country.init(
   },
   {
     sequelize,
-    tableName: "tbl_country",
-    modelName: "Country",
+    tableName: "tbl_toppings",
+    modelName: "Toppings",
     timestamps: true, // Sequelize auto manages createdAt / updatedAt
   }
 );
+async function sync() {
+    await Toppings.sync();
+}
+sync();
 
-export default Country;
+Toppings.belongsTo(Products, { foreignKey: "productid", as: "product" });
+Products.hasMany(Toppings, { foreignKey: "productid", as: "toppings" });
+
+export default Toppings;

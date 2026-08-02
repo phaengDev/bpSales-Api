@@ -2,7 +2,7 @@
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
-import Users from "../models/Users";
+import Users from "../models/Users.controller";
 const JWT_SECRET = (process.env.JWT_SECRET ?? "Stock-Phaeng@2026").trim();
 /**
  * For a dedicated /auth/verify endpoint that just returns the decoded token.

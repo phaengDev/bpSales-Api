@@ -1,28 +1,36 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CartImport = void 0;
+exports.Exchanges = void 0;
 const sequelize_1 = require("sequelize");
 const database_1 = require("../config/database");
-const Products_1 = __importDefault(require("./Products"));
-class CartImport extends sequelize_1.Model {
+class Exchanges extends sequelize_1.Model {
 }
-exports.CartImport = CartImport;
+exports.Exchanges = Exchanges;
 // Define model
-CartImport.init({
+Exchanges.init({
     _uuid: {
         type: sequelize_1.DataTypes.INTEGER.UNSIGNED,
         autoIncrement: true,
         primaryKey: true,
     },
-    productid: {
+    shopid: {
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: true,
     },
-    userbyid: {
+    abbr: {
+        type: sequelize_1.DataTypes.STRING(10),
+        allowNull: true,
+    },
+    icons: {
+        type: sequelize_1.DataTypes.STRING(255),
+        allowNull: true,
+    },
+    rate: {
         type: sequelize_1.DataTypes.INTEGER,
+        allowNull: true,
+    },
+    genus: {
+        type: sequelize_1.DataTypes.STRING(10),
         allowNull: true,
     },
     status: {
@@ -42,9 +50,8 @@ CartImport.init({
     },
 }, {
     sequelize: database_1.sequelize,
-    tableName: "tbl_cart_import",
-    modelName: "CartImport",
+    tableName: "tbl_exchange",
+    modelName: "Exchanges",
     timestamps: true, // Sequelize auto manages createdAt / updatedAt
 });
-CartImport.belongsTo(Products_1.default, { foreignKey: "productid", as: "product" });
-exports.default = CartImport;
+exports.default = Exchanges;

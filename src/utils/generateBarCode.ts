@@ -8,7 +8,10 @@ import { ModelStatic, Transaction, Model, Op } from "sequelize";
  */
 
 
-export async function generateBarCode(shopid: number | string): Promise<string> {
+export async function generateBarCode(
+  shopid: number | string,
+  transaction?: Transaction
+): Promise<string> {
   let code: string;
   let exists = true;
   let tries = 0;
@@ -19,6 +22,7 @@ export async function generateBarCode(shopid: number | string): Promise<string> 
     // ✅ ตรวจว่ามีใน DB หรือยัง
     const found = await Products.findOne({
       where: { barcode: code, shopid: shopid },
+      transaction,
     });
 
     exists = !!found;
@@ -33,7 +37,8 @@ export async function generateBarCode(shopid: number | string): Promise<string> 
 export const maxsku = async (
   model: ModelStatic<Model<any, any>>,
   field: string,
-  skuPrefix: string
+  skuPrefix: string,
+  transaction?: Transaction
 ): Promise<string> => {
   if (!skuPrefix) throw new Error("❌ SKU prefix is required");
 
@@ -43,6 +48,7 @@ export const maxsku = async (
       [field]: { [Op.like]: `${skuPrefix}%` },
     },
     order: [[field, "DESC"]],
+    transaction,
   });
 
   // 🔹 ถ้ามีข้อมูลล่าสุด → ต่อท้าย +1

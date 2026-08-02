@@ -11,12 +11,12 @@ import Categories from "../models/Categories";
 import moment from "moment";
 import CartOrder from "../models/CartOrder";
 import Products from "../models/Products";
-import Country from "../models/Country";
-import Units from "../models/Units";
-import Shops from "../models/Shops";
+import Exchanges from "../models/Exchanges";
+import Units from "../models/Units.controller";
+import Shops from "../models/Shops.controller";
 import District from "../models/Districts";
-import Sizes from "../models/Sizes";
-import Users from "../models/Users";
+import Sizes from "../models/Sizes.controller";
+import Users from "../models/Users.controller";
 
 interface QueryParams {
     limit?: string;
@@ -267,9 +267,9 @@ export const fetchSaleDaily = async (
             order: [[orderBy, order]],
             include: [
                 {
-                    model: Country,
-                    as: "country",
-                    attributes: ["names", "abbr", "icons", "rate", "genus"],
+                    model: Exchanges,
+                    as: "exchange",
+                    attributes: ["abbr", "icons", "rate", "genus"],
                 },
                 {
                     model: Users,
@@ -364,8 +364,8 @@ export const getSalebyid = async (req: Request<{ id: string }>, res: Response) =
                     ]
                 },
                 {
-                    model: Country,
-                    as: "country",
+                    model: Exchanges,
+                    as: "exchange",
                 },
                 {
                     model: Users,
@@ -640,9 +640,9 @@ export const fetchBillCancel = async (
             order: [[orderBy, order]],
             include: [
                 {
-                    model: Country,
-                    as: "country",
-                    attributes: ["names", "abbr", "icons", "rate", "genus"],
+                    model: Exchanges,
+                    as: "exchange",
+                    attributes: ["abbr", "icons", "rate", "genus"],
                 },
                 {
                     model: Users,

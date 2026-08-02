@@ -56,6 +56,6 @@ Promotion.belongsTo(Products_1.default, {
 });
 Products_1.default.hasMany(Promotion, {
     foreignKey: "productid",
-    as: "promotion",
+    as: "proms",
 });
 exports.default = Promotion;

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.updateUser = exports.getUserById = exports.createUser = exports.getUsers = void 0;
+exports.getUserOption = exports.deleteUser = exports.updateUser = exports.getUserById = exports.createUser = exports.getUsers = void 0;
 const Users_1 = __importDefault(require("../models/Users"));
 const utils_1 = require("../utils");
 // import jwt from "jsonwebtoken";
@@ -111,3 +111,19 @@ const deleteUser = async (req, res) => {
     }
 };
 exports.deleteUser = deleteUser;
+const getUserOption = async (req, res) => {
+    try {
+        const shopid = req.params.id;
+        const user = await Users_1.default.findAll({
+            where: { shopid: shopid, status: 1 },
+            attributes: { exclude: ["password"] },
+        });
+        if (!user)
+            return res.status(404).json({ error: "User not found" });
+        res.status(200).json({ data: user });
+    }
+    catch (error) {
+        res.status(500).json({ error: "Failed to fetch user" });
+    }
+};
+exports.getUserOption = getUserOption;

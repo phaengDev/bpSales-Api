@@ -4,8 +4,12 @@ export function url() {
   return 'http://localhost:3707/image'; // no need to be async
 }
 
-export async function maxid(model: ModelStatic<any>, column: string): Promise<number> {
-  const maxResult = await model.max(column) as number | null;
+export async function maxid(
+  model: ModelStatic<any>,
+  column: string,
+  options: { transaction?: Transaction } = {}
+): Promise<number> {
+  const maxResult = await model.max(column, options) as number | null;
   const nextId = (maxResult ?? 10000) + 1; // starts from 10001
   return nextId;
 }

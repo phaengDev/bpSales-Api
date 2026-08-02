@@ -124,8 +124,15 @@ const getSupplierOption = async (req, res) => {
         const shopid = req.params.id;
         const supplier = await Suppliers_1.default.findAll({
             where: { shopid: shopid, status: 1 },
+            include: [
+                {
+                    model: Country_1.default,
+                    as: "country",
+                    attributes: ["names", "abbr", "icons"],
+                },
+            ],
         });
-        res.status(200).json(supplier);
+        res.status(200).json({ data: supplier });
     }
     catch (error) {
         res.status(500).json({ error: "Failed to fetch supplier" });

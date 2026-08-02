@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { maxid, maxCode, } from "../utils";
-import Units from "../models/Units";
+import Units from "../models/Units.controller";
 interface QueryParams {
     limit?: string;
     skip?: string;

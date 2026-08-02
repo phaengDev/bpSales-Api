@@ -5,8 +5,8 @@ import Wholesale from "../models/Wholesale";
 import Products from "../models/Products";
 import Brands from "../models/Brands";
 import Categories from "../models/Categories";
-import Units from "../models/Units";
-import Sizes from "../models/Sizes";
+import Units from "../models/Units.controller";
+import Sizes from "../models/Sizes.controller";
 interface QueryParams {
     limit?: string;
     skip?: string;

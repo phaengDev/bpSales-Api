@@ -13,10 +13,6 @@ Country.init({
         autoIncrement: true,
         primaryKey: true,
     },
-    shopid: {
-        type: sequelize_1.DataTypes.INTEGER,
-        allowNull: true,
-    },
     names: {
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: true,
@@ -27,14 +23,6 @@ Country.init({
     },
     icons: {
         type: sequelize_1.DataTypes.STRING(255),
-        allowNull: true,
-    },
-    rate: {
-        type: sequelize_1.DataTypes.INTEGER,
-        allowNull: true,
-    },
-    genus: {
-        type: sequelize_1.DataTypes.STRING(10),
         allowNull: true,
     },
     status: {

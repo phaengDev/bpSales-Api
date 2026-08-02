@@ -1,8 +1,8 @@
 import { DataTypes, Model, Optional } from "sequelize";
 import {sequelize} from "../config/database";
-import Country from "./Country";
-import Shops from "./Shops";
-import Users from "./Users";
+import Exchanges from "./Exchanges";
+import Shops from "./Shops.controller";
+import Users from "./Users.controller";
 // Define the attributes interface
 interface BillsalesAttributes {
   bill_uuid: number;
@@ -14,7 +14,7 @@ interface BillsalesAttributes {
   balanceTotal?: number | null;
   taxBalance?: number | null;
   discount?: number | null;
-  countryid?: number | null;
+  exchangeid?: number | null;
   rate?: number | null;
   balance_payable?: number | null;
   getCash?: number | null;
@@ -44,7 +44,7 @@ export class Billsales extends Model<BillsalesAttributes, BillsalesCreationAttri
   public balanceTotal!: number | null;
   public taxBalance!: number | null;
   public discount!: number | null;
-  public countryid!: number | null;
+  public exchangeid!: number | null;
   public rate!: number | null;
   public balance_payable!: number | null;
   public getCash!: number | null;
@@ -101,7 +101,7 @@ Billsales.init(
       type: DataTypes.DECIMAL(12, 2),
       allowNull: true,
     },
-    countryid: {
+    exchangeid: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
@@ -171,7 +171,7 @@ Billsales.init(
 );
 
 // export 
-Billsales.belongsTo(Country, { foreignKey: "countryid", as: "country" });
+Billsales.belongsTo(Exchanges, { foreignKey: "exchangeid", as: "exchange" });
 Billsales.belongsTo(Shops, { foreignKey: "shopid", as: "shop" });
 Billsales.belongsTo(Users, { foreignKey: "createby", as: "user" });
 export default Billsales;

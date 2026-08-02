@@ -24,11 +24,22 @@ CartOrder.init({
     quantity: {
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: true,
+        defaultValue: 1,
+    },
+    promotion: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0,
     },
     salePrices: {
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: true,
-        defaultValue: 1,
+        defaultValue: 0,
+    },
+    discount: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0,
     },
     userbyid: {
         type: sequelize_1.DataTypes.INTEGER,

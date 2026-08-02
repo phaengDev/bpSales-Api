@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.codeNo = exports.maxids = void 0;
+exports.billno = exports.codeNo = exports.maxids = void 0;
 exports.url = url;
 exports.maxid = maxid;
 exports.maxCode = maxCode;
@@ -9,8 +9,8 @@ const sequelize_1 = require("sequelize");
 function url() {
     return 'http://localhost:3707/image'; // no need to be async
 }
-async function maxid(model, column) {
-    const maxResult = await model.max(column);
+async function maxid(model, column, options = {}) {
+    const maxResult = await model.max(column, options);
     const nextId = (maxResult ?? 10000) + 1; // starts from 10001
     return nextId;
 }
@@ -49,6 +49,28 @@ const codeNo = async (model, field, code) => {
     return newCode;
 };
 exports.codeNo = codeNo;
+const billno = async (model, field, prefix, dateField) => {
+    const lastRow = await model.findOne({
+        where: {
+            [field]: { [sequelize_1.Op.like]: `${prefix}%` },
+            [sequelize_1.Op.and]: [
+                sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn("DATE", sequelize_1.Sequelize.col(dateField)), "=", sequelize_1.Sequelize.fn("CURDATE"))
+            ]
+        },
+        order: [[field, "DESC"]],
+    });
+    if (!lastRow) {
+        return `${prefix}1`;
+    }
+    const lastCode = lastRow.get(field);
+    const suffix = lastCode.replace(prefix, "");
+    if (!suffix || isNaN(Number(suffix))) {
+        return `${prefix}1`;
+    }
+    const nextNumber = Number(suffix) + 1;
+    return `${prefix}${nextNumber}`;
+};
+exports.billno = billno;
 async function maxCode(model, column, prefix, transaction) {
     const maxResult = await model.findOne({
         attributes: [[model.sequelize.fn('MAX', model.sequelize.col(column)), 'maxCode']],

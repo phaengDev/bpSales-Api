@@ -12,7 +12,7 @@ const createBrand = async (req, res) => {
     try {
         const new_uuid = await (0, utils_1.maxid)(Brands_1.default, "brand_uuid");
         req.body.brand_uuid = new_uuid;
-        const newCode = await (0, utils_1.maxCode)(Brands_1.default, "brandCode", "BRD");
+        const newCode = await (0, utils_1.maxCode)(Brands_1.default, "brandCode", "BN");
         req.body.brandCode = newCode;
         const brand = await Brands_1.default.create(req.body);
         res.status(200).json({ message: "Brand created successfully", data: brand });
