@@ -22,17 +22,17 @@ type BillsaleListCreationAttributes = Optional<BillsaleListAttributes, "_uuid">;
 
 export class BillsaleList extends Model<BillsaleListAttributes, BillsaleListCreationAttributes>
   implements BillsaleListAttributes {
-  public _uuid!: number;
-  public billsaleid!: number | null;
-  public productid!: number | null;
-  public price_buy!: number | null;
-  public price_sales!: number | null;
-  public discount!: number | null;
-  public quantity!: number | null;
-  public free!: number | null;
-  public status!: number | null;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  declare _uuid: number;
+  declare billsaleid: number | null;
+  declare productid: number | null;
+  declare price_buy: number | null;
+  declare price_sales: number | null;
+  declare discount: number | null;
+  declare quantity: number | null;
+  declare free: number | null;
+  declare status: number | null;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
 }
 
 // Define model

@@ -147,9 +147,10 @@ router.get("/address/province", getProvince);
 router.get("/address/district/pv/:id", getDistrict);
 router.get("/address/country", getCountry);
 router.get("/address/company", getCompany);
-router.get("/shop/:id",getShops);
+router.get("/verify",verifyToken);
 
 router.use(verifyToken);
+router.get("/shop/:id",getShops);
 // ===== User routes
 router.get("/user/fetch/:id", getUsers);
 router.get("/user/:id", getUserById);

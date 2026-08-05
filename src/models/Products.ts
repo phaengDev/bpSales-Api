@@ -18,6 +18,8 @@ interface ProductsAttributes {
   quantity?: number | null;
   buyPrices?: number | null;
   sellPrices?: number | null;
+  wholesalePrice?: number | null;
+  vipPrice?: number | null;
   stock?: number | null;
   description?: string | null;
   usage?: number | null;
@@ -45,6 +47,8 @@ export class Products extends Model<ProductsAttributes, ProductsCreationAttribut
   declare quantity: number | null;
   declare buyPrices: number | null;
   declare sellPrices: number | null;
+  declare wholesalePrice: number | null;
+  declare vipPrice: number | null;
   declare stock: number | null;
   declare description: string | null;
   declare usage: number | null;
@@ -104,6 +108,15 @@ Products.init(
       type: DataTypes.DECIMAL(12, 2),
       allowNull: true,
     },
+    wholesalePrice: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+    },
+    vipPrice: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+    },
+
     stock: {
       type: DataTypes.INTEGER,
       allowNull: true,

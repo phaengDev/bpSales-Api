@@ -40,9 +40,7 @@ const parseToppings = (rawToppings: unknown): ToppingPayload[] => {
     if (rawToppings === undefined || rawToppings === null || rawToppings === "") {
         return [];
     }
-
     let parsedToppings: unknown = rawToppings;
-
     if (typeof rawToppings === "string") {
         try {
             parsedToppings = JSON.parse(rawToppings);
@@ -137,10 +135,8 @@ const syncProductToppings = async (
 
     for (const topping of toppings) {
         if (topping._uuid === undefined) continue;
-
         const values = getToppingValues(topping);
         if (Object.keys(values).length === 0) continue;
-
         await Toppings.update(values, {
             where: { _uuid: topping._uuid, productid },
             transaction,
