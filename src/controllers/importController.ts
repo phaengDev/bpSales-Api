@@ -4,12 +4,12 @@ import { Op } from 'sequelize';
 import { maxids } from "../utils";
 import Imported from "../models/Imported";
 import Products from "../models/Products";
-import Units from "../models/Units.controller";
-import Sizes from "../models/Sizes.controller";
+import Units from "../models/Units.Model";
+import Sizes from "../models/Sizes.Model";
 import CartImport from "../models/CartImport";
 import moment from "moment";
 import Brands from "../models/Brands";
-import Users from "../models/Users.controller";
+import Users from "../models/Users.Model";
 import Purchase from "../models/Purchase";
 import PurchaseList from "../models/PurchaseList";
 interface QueryParams {

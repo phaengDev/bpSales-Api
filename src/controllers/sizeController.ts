@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { maxid, maxCode, } from "../utils";
-import Sizes from "../models/Sizes.controller";
+import Sizes from "../models/Sizes.Model";
 interface QueryParams {
     limit?: string;
     skip?: string;

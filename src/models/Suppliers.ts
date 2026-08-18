@@ -11,7 +11,7 @@ interface SuppliersAttributes {
   countryid?: number | null;
   villageName?: string | null;
   districtName?: string | null;
-  provinceName?: string | null;
+  name_la?: string | null;
   description?: string | null;
   status?: number | null;
   createdAt?: Date | null;
@@ -31,7 +31,7 @@ export class Suppliers extends Model<SuppliersAttributes, SuppliersCreationAttri
   public countryid!: number | null;
   public villageName!: string | null;
   public districtName!: string | null;
-  public provinceName!: string | null;
+  public name_la!: string | null;
   public description!: string | null;
   public status!: number | null;
   public readonly createdAt!: Date;
@@ -74,7 +74,7 @@ Suppliers.init(
       type: DataTypes.STRING(255),
       allowNull: true,
     },
-    provinceName: {
+    name_la: {
       type: DataTypes.STRING(255),
       allowNull: true,
     },

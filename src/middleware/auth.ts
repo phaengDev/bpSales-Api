@@ -1,9 +1,9 @@
 // src/middleware/auth.ts
 import { Request, Response, NextFunction } from "express";
-import Users from "../models/Users.controller";
+import Users from "../models/Users.Model";
 import bcrypt from "bcryptjs";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import Shops from "../models/Shops.controller";
+import Shops from "../models/Shops.Model";
 // import TypeUser from "../models/typeUserModel";
 const JWT_SECRET = (process.env.JWT_SECRET ?? "Stock-Phaeng@2026").trim();
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1d";
@@ -15,7 +15,7 @@ declare global {
     interface Request {
       user?: JwtPayload & {
         sub?: string;         // standard subject
-        phones?: string;
+        phone?: string;
         role?: string;
       };
     }
@@ -28,11 +28,11 @@ declare global {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const { phones, password } = req.body as any;
-    if (!phones || !password) return res.status(400).json({ message: "phones and password are required" });
+    const { phone, password } = req.body as any;
+    if (!phone || !password) return res.status(400).json({ message: "phones and password are required" });
 
     const user = await Users.findOne({
-      where: { phones, status: 1 },
+      where: { phone, status: 1 },
       include: [{
         model: Shops,
         as: "shop"
@@ -48,7 +48,7 @@ export const login = async (req: Request, res: Response) => {
     if (!JWT_SECRET) return res.status(500).json({ message: "JWT secret not configured" });
     const payload = {
       sub: String(user.getDataValue("user_uuid")),   // <- avoid BigInt
-      phones: user.getDataValue("phones"),
+      phone: user.getDataValue("phone"),
       role: user.getDataValue("typeuser"),
       date: new Date().toISOString(),
     };
@@ -73,7 +73,7 @@ export const login = async (req: Request, res: Response) => {
       user: {
         user_uuid: user.getDataValue("user_uuid"),
         userName: user.getDataValue("userName"),
-        phones: user.getDataValue("phones"),
+        phone: user.getDataValue("phone"),
         typeuser: user.getDataValue("typeuser"),
         shopid: user.getDataValue("shopid"),
         shopName: shopName,

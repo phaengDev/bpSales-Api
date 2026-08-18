@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Op, fn, col, literal } from "sequelize";
-import { maxid, maxCode, url } from "../utils";
+import { maxid, url } from "../utils";
 import Customer from "../models/Customer";
 import { deleteFile } from "../utils/uploadFile";
 import District from "../models/Districts";
@@ -16,16 +16,17 @@ export const createCustomer = async (req: Request, res: Response) => {
     try {
         const new_uuid = await maxid(Customer, "_uuid");
         req.body._uuid = new_uuid;
-        const newCode = await maxCode(Customer, "codes", "BPS");
-        req.body.codes = newCode;
+        const phone = String(req.body.phone ?? "").trim();
+        req.body.codes = phone.replace(/^20/, "");
         const images = req.file?.filename;
         req.body.profiles = images || "";
-        const existing = await Customer.findOne({ where: { phones: req.body.phones } });
+        const existing = await Customer.findOne({ where: { phone: req.body.phone } });
         if (existing) {
             res.status(409).json({ error: "Customer with this name already exists" });
             return;
         }
         const customer = await Customer.create(req.body);
+        if(!customer) return res.status(404).json({ error: "Customer not found" });
         res.status(200).json({ message: "Customer created successfully", data: customer });
     } catch (error) {
         res.status(500).json({ error: "Failed to create customer" });
@@ -36,6 +37,10 @@ export const updateCustomer = async (req: Request, res: Response) => {
     try {
         const _uuid = atob(req.params.id);
         req.body.updatedAt = new Date();
+        if (req.body.phone !== undefined && req.body.phone !== null) {
+            const phone = String(req.body.phone).trim();
+            req.body.codes = phone.replace(/^20/, "");
+        }
         const customer = await Customer.findByPk(_uuid);
         if (!customer) return res.status(404).json({ error: "Customer not found" });
         const images = req.file?.filename;
@@ -70,6 +75,7 @@ export const deleteCustomer = async (req: Request<{ id: string }>, res: Response
             where: { _uuid: _uuid },
         });
         if (!deleted) return res.status(404).json({ error: "Customer not found" });
+
         res.status(200).json({ message: "Customer deleted successfully", data: deleted });
     } catch (error) {
         res.status(500).json({ error: "Failed to delete customer" });
@@ -79,7 +85,7 @@ export const deleteCustomer = async (req: Request<{ id: string }>, res: Response
 // get  Customer
 export const getCustomer = async (req: Request<{}, {}, {}, QueryParams>, res: Response) => {
     try {
-        const limit = req.query.limit ? parseInt(req.query.limit, 10) : 25;
+        const limit = req.query.limit ? parseInt(req.query.limit, 10) : 100;
         const skip = req.query.skip ? parseInt(req.query.skip, 10) : 0;
         const orderBy = req.query.orderBy || "_uuid";
         const order = (req.query.order || "ASC").toUpperCase() as "ASC" | "DESC";
@@ -109,12 +115,12 @@ export const getCustomer = async (req: Request<{}, {}, {}, QueryParams>, res: Re
                 {
                     model: District,
                     as: "district",
-                    attributes: ["distName", "_uuid","provinceid"],
+                    attributes: ["name_la","name_en", "_uuid","provinceid"],
                     include: [
                         {
                             model: Provinces,
                             as: "province",
-                            attributes: ["provinceName", "_uuid"],
+                            attributes: ["name_la","name_en", "_uuid"],
                         }
                     ]
                 },

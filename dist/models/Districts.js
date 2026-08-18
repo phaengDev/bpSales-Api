@@ -21,7 +21,7 @@ District.init({
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: false,
     },
-    distName: {
+    name_la: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: false,
     },

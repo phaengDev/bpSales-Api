@@ -6,7 +6,8 @@ import Provinces from "./Provinces";
 interface DistrictAttributes {
     _uuid: number;
     provinceid: number;
-    distName: string;
+    name_la: string;
+    name_en: string;
     status: number;
     createdAt: Date;
     updatedAt: Date;
@@ -17,12 +18,12 @@ export type DistrictCreationAttributes = Optional<DistrictAttributes, "_uuid">;
 export class District extends Model<DistrictAttributes, DistrictCreationAttributes> {
     public _uuid!: number;
     public provinceid!: number;
-    public distName!: string;
+    public name_la!: string;
+    public name_en!: string;
     public status!: number;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
-
 District.init(
     {
         _uuid: {
@@ -34,7 +35,11 @@ District.init(
             type: DataTypes.INTEGER,
             allowNull: false,
         },
-        distName: {
+        name_la: {
+            type: DataTypes.STRING,
+            allowNull: false,
+        },
+        name_en: {
             type: DataTypes.STRING,
             allowNull: false,
         },

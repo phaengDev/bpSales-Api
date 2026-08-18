@@ -7,11 +7,14 @@ interface CustomerAttributes {
     _uuid: number;
     codes?: string | null;
     profiles?: string | null;
-    custName?: string | null;
-    phones?: string | null;
+    gender?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    phone?: string | null;
+    email?: string | null;
     villages?: string | null;
     districtid?: number | null;
-    types?: number | null;
+    types?: number | null; // ===== 1 = ລູກຄ້າທົ່ວໄປ, 2 = ຕົວແທນ 3= ສະມາຊິກ
     percent?: number | null;
     description?: string | null;
     status?: number | null;
@@ -21,22 +24,24 @@ interface CustomerAttributes {
 
 // Optional fields when creating a new Customer
 type CustomerCreationAttributes = Optional<CustomerAttributes, "_uuid">;
-
 export class Customer extends Model<CustomerAttributes, CustomerCreationAttributes>
     implements CustomerAttributes {
-    public _uuid!: number;
-    public codes!: string | null;
-    public profiles!: string | null;
-    public custName!: string | null;
-    public phones!: string | null;
-    public villages!: string | null;
-    public districtid!: number | null;
-    public types!: number | null;
-    public percent!: number | null;
-    public description!: string | null;
-    public status!: number | null;
-    public readonly createdAt!: Date;
-    public readonly updatedAt!: Date;
+    declare _uuid: number;
+    declare codes: string | null;
+    declare profiles: string | null;
+    declare gender: string | null;
+    declare first_name: string | null;
+    declare last_name: string | null;
+    declare phone: string | null;
+    declare email: string | null;
+    declare villages: string | null;
+    declare districtid: number | null;
+    declare types: number | null;
+    declare percent: number | null;
+    declare description: string | null;
+    declare status: number | null;
+    declare readonly createdAt: Date;
+    declare readonly updatedAt: Date;
 }
 
 // Define model
@@ -55,12 +60,24 @@ Customer.init(
             type: DataTypes.STRING(255),
             allowNull: true,
         },
-        custName: {
+        gender: {
             type: DataTypes.STRING(255),
             allowNull: true,
         },
-        phones: {
+        first_name: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+        },
+        last_name: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+        },
+        phone: {
             type: DataTypes.STRING(20),
+            allowNull: true,
+        },
+        email: {
+            type: DataTypes.STRING(255),
             allowNull: true,
         },
         villages: {
@@ -106,5 +123,6 @@ Customer.init(
         timestamps: true, // Sequelize auto manages createdAt / updatedAt
     }
 );
+
 Customer.belongsTo(Districts, { foreignKey: "districtid",as: "district" });
 export default Customer;

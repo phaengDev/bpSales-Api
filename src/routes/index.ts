@@ -6,7 +6,8 @@ import {getProvince, getDistrict, getCountry,
 getShops} from "../controllers/addressController";
 
 import {
-  getExchange,updateExchange
+  createExchange,
+  getExchange
 } from "../controllers/exchangeController";
 
 import {
@@ -87,7 +88,8 @@ import {
   updateCartMinus,
   deleteCart,
   addOrderBarcode,
-  updatePriceOrder
+  updatePriceOrder,
+  updateQuantityOrder
 } from "../controllers/addOrder";
 // ===== import order controller
 import {
@@ -99,15 +101,6 @@ import {
   addorderImportBarcode
 } from "../controllers/cartImport";
 //  import Price controller
-import {
-  createPriceOne,
-  createPriceMt,
-  updatePrice,
-  deletePrice,
-  deletePricebyProduct,
-  getPricebyProduct,
-  getPriceAll,
-} from "../controllers/wholesaleController";
 
 // import Promotion controller
 import {
@@ -160,7 +153,7 @@ router.delete("/user/:id", deleteUser);
 router.get("/user/option/:id", getUserOption);
 // ====================
 router.get("/exchange/fetch/:id", getExchange);
-router.put("/exchange/:id", updateExchange);
+router.post("/exchange/create", createExchange);
 
 // ====== Supplier routes
 router.get("/supplier/fetch/:id", getSupplier);
@@ -222,14 +215,7 @@ router.post("/purchase/fetch", getPurchase);
 router.get("/purchase/:id", getPurchaseById);
 router.get("/purchase/main/:id", getPurchaseBymain);
 router.post("/purchase/search", searchBillPurchase);
-// === Price routes
-router.post("/price/create/one", createPriceOne);
-router.post("/price/create/mt", createPriceMt);
-router.put("/price/:id", updatePrice);
-router.delete("/price/:id", deletePrice);
-router.delete("/price/product/:id", deletePricebyProduct);
-router.get("/price/product/:id", getPricebyProduct);
-router.post("/price/fetch", getPriceAll);
+
 // ===== Order routes
 router.post("/order/create", addOrder);
 router.get("/order/fetch/:id", getCartOrder);
@@ -238,6 +224,8 @@ router.put("/order/minus/:id", updateCartMinus);
 router.delete("/order/:id", deleteCart);
 router.post("/order/getsale", addOrderBarcode);
 router.put("/order/price/:id", updatePriceOrder);
+router.put("/order/qty/:id", updateQuantityOrder);
+
 // ======= Order import routes
 router.post("/cartimport/create", addorderImport);
 router.delete("/cartimport/:id", deleteCartImport);

@@ -1,14 +1,12 @@
 import { DataTypes, Model, Optional } from "sequelize";
 import {sequelize} from "../config/database";
-
+import Country from "./Country";
 // Define the attributes interface
 interface ExchangesAttributes {
   _uuid: number;
   shopid?: number | null;
-  abbr?: string | null;
-  icons?: string | null;
+  countryid?: number | null;
   rate?: number | null;
-  genus?: string | null;
   status?: number | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
@@ -21,10 +19,8 @@ export class Exchanges extends Model<ExchangesAttributes, ExchangesCreationAttri
   implements ExchangesAttributes {
   public _uuid!: number;
   public shopid!: number | null;
-  public abbr!: string | null;
-  public icons!: string | null;
+  public countryid!: number | null;
   public rate!: number | null;
-  public genus!: string | null;
   public status!: number | null;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -42,20 +38,12 @@ Exchanges.init(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    abbr: {
-      type: DataTypes.STRING(10),
-      allowNull: true,
-    },
-    icons: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-    },
-    rate: {
+    countryid: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    genus: {
-      type: DataTypes.STRING(10),
+    rate: {
+      type: DataTypes.FLOAT,
       allowNull: true,
     },
     status: {
@@ -81,5 +69,8 @@ Exchanges.init(
     timestamps: true, // Sequelize auto manages createdAt / updatedAt
   }
 );
+
+Exchanges.belongsTo(Country, { foreignKey: "countryid", as: "country" });
+Country.hasMany(Exchanges, { foreignKey: "countryid", as: "rates" });
 
 export default Exchanges;

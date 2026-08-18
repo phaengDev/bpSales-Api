@@ -3,8 +3,8 @@ import { Sequelize, Op, fn, col, literal } from 'sequelize';
 import { maxid, url } from "../utils";
 import CartImport from "../models/CartImport";
 import Products from "../models/Products";
-import Units from "../models/Units.controller";
-import Sizes from "../models/Sizes.controller";
+import Units from "../models/Units.Model";
+import Sizes from "../models/Sizes.Model";
 
 
 export const addorderImport = async (req: Request, res: Response) => {

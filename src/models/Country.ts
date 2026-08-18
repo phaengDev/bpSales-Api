@@ -1,12 +1,12 @@
 import { DataTypes, Model, Optional } from "sequelize";
-import {sequelize} from "../config/database";
-
+import { sequelize } from "../config/database";
 // Define the attributes interface
 interface CountryAttributes {
   _uuid: number;
   names?: string | null;
   abbr?: string | null;
   icons?: string | null;
+  genus?: string | null;
   status?: number | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
@@ -21,6 +21,7 @@ export class Country extends Model<CountryAttributes, CountryCreationAttributes>
   public names!: string | null;
   public abbr!: string | null;
   public icons!: string | null;
+  public genus!: string | null;
   public status!: number | null;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -44,6 +45,10 @@ Country.init(
     },
     icons: {
       type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    genus: {
+      type: DataTypes.STRING(10),
       allowNull: true,
     },
     status: {

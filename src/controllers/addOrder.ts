@@ -3,9 +3,8 @@ import { fn, col, literal } from 'sequelize';
 import { maxid, url } from "../utils";
 import CartOrder from "../models/CartOrder";
 import Products from "../models/Products";
-import Units from "../models/Units.controller";
-import Sizes from "../models/Sizes.controller";
-import Wholesale from "../models/Wholesale";
+import Units from "../models/Units.Model";
+import Sizes from "../models/Sizes.Model";
 import Promotion from "../models/Promotion";
 import { Toppings } from "../models/Toppings.model";
 
@@ -62,20 +61,34 @@ const getPromotionQuantity = async (
     }, 0);
 };
 
+const getProductSalePrice = async (
+    productid: number | null,
+    transaction?: any
+) => {
+    if (!productid) return 0;
+
+    const product = await Products.findByPk(productid, {
+        attributes: ["sellPrices"],
+        transaction,
+    });
+
+    return toNumber(product?.sellPrices);
+};
+
 const buildCartPromotionValues = async ({
     productid,
     paidQuantity,
-    salePrices,
     transaction,
 }: {
     productid: number | null;
     paidQuantity: number;
-    salePrices: number | null;
     transaction?: any;
 }) => {
     const payableQuantity = Math.max(toNumber(paidQuantity, 1), 1);
-    const promotion = await getPromotionQuantity(productid, payableQuantity, transaction);
-    const price = toNumber(salePrices);
+    const [promotion, price] = await Promise.all([
+        getPromotionQuantity(productid, payableQuantity, transaction),
+        getProductSalePrice(productid, transaction),
+    ]);
 
     return {
         quantity: payableQuantity,
@@ -102,18 +115,15 @@ export const addOrder = async (req: Request, res: Response) => {
         // let result;
         // if (existingOrder) {
         //     const paidQuantity = getPaidQuantity(existingOrder) + Math.max(toNumber(req.body.quantity, 1), 1);
-        //     const salePrices = toNumber(req.body.salePrices, toNumber(existingOrder.salePrices));
         //     const promotionValues = await buildCartPromotionValues({
         //         productid: existingOrder.productid,
         //         paidQuantity,
-        //         salePrices,
         //         transaction: t,
         //     });
 
         //     await CartOrder.update(
         //         {
         //             ...promotionValues,
-        //             salePrices,
         //             updatedAt: new Date(),
         //         },
         //         { where: { productid, userbyid }, transaction: t }
@@ -124,20 +134,19 @@ export const addOrder = async (req: Request, res: Response) => {
         //         where: { productid, userbyid }, transaction: t,
         //     });
         // } else {
-        const salePrices = toNumber(req.body.salePrices);
         const promotionValues = await buildCartPromotionValues({
             productid: toNumber(productid),
             paidQuantity: Math.max(toNumber(req.body.quantity, 1), 1),
-            salePrices,
             transaction: t,
         });
+
+        const { salePrices: _salePrices, ...cartValues } = req.body;
 
         // ✅ สร้างสินค้าใหม่ใน cart
         const result = await CartOrder.create(
             {
-                ...req.body,
+                ...cartValues,
                 ...promotionValues,
-                salePrices,
             },
             { transaction: t }
         );
@@ -176,7 +185,6 @@ export const updateCartPlus = async (
         const promotionValues = await buildCartPromotionValues({
             productid: cartorder.productid,
             paidQuantity: getPaidQuantity(cartorder) + 1,
-            salePrices: cartorder.salePrices,
             transaction: t,
         });
 
@@ -220,7 +228,6 @@ export const updateCartMinus = async (
         const promotionValues = await buildCartPromotionValues({
             productid: cartorder.productid,
             paidQuantity: Math.max(getPaidQuantity(cartorder) - 1, 1),
-            salePrices: cartorder.salePrices,
             transaction: t,
         });
 
@@ -246,6 +253,55 @@ export const updateCartMinus = async (
 };
 
 
+
+
+// update cartorder plus
+export const updateQuantityOrder = async (
+    req: Request<{ id: string }, any>,
+    res: Response
+): Promise<void> => {
+    const t = await CartOrder.sequelize?.transaction();
+    try {
+        const cart_uuid = decodeParamId(req.params.id);
+        const { quantity } = req.body;
+        const cartorder = await CartOrder.findByPk(cart_uuid, { transaction: t });
+        if (!cartorder) {
+            await t?.rollback();
+            res.status(404).json({ message: "Cart order not found" });
+            return;
+        }
+
+        const promotionValues = await buildCartPromotionValues({
+            productid: cartorder.productid,
+            paidQuantity: quantity,
+            transaction: t,
+        });
+
+        await cartorder.update(
+            {
+                quantity: promotionValues.quantity,
+                promotion: promotionValues.promotion,
+                discount: promotionValues.discount,
+                updatedAt: new Date(),
+            },
+            { transaction: t }
+        );
+        const updated = await CartOrder.findByPk(cart_uuid, { transaction: t });
+        await t?.commit();
+if(!updated){
+    res.status(404).json({ message: "Cart order not found" });
+    return;
+}
+        // Return the updated cart order object in the response
+        res.status(200).json({ message: "Update success", data: updated });
+    } catch (error) {
+        await t?.rollback();
+        console.error("Error updating cart:", error);
+        res.status(500).json({ message: "Error updating cart" });
+    }
+};
+
+
 export const deleteCart = async (
     req: Request<{ id: string }, any>,
     res: Response
@@ -257,7 +313,11 @@ export const deleteCart = async (
             res.status(404).json({ message: "Cart not found" });
             return;
         }
-        await CartOrder.destroy({ where: { cart_uuid: id } });
+      const result =  await CartOrder.destroy({ where: { cart_uuid: id } });
+      if(!result){
+        res.status(404).json({ message: "Cart not found" });
+        return;
+      }
         res.status(200).json({ message: "Cart deleted successfully", data: targetCart });
     } catch (error) {
         console.error("Error in delete CArt:", error);
@@ -284,6 +344,8 @@ export const getCartOrder = async (req: Request<{ id: string }>, res: Response) 
                         "stock",
                         "buyPrices",
                         "sellPrices",
+                        "wholesalePrice",
+                        "vipPrice",
                         [fn("CONCAT", literal(`'${url()}/product/'`), col("product.images")), "url"],
                     ],
 
@@ -297,10 +359,6 @@ export const getCartOrder = async (req: Request<{ id: string }>, res: Response) 
                             model: Sizes,
                             as: "size",
                             attributes: ["sizeName"],
-                        },
-                        {
-                            model: Wholesale,
-                            as: "price",
                         },
                     ],
                 },
@@ -331,22 +389,18 @@ export const updatePriceOrder = async (req: Request<{ id: string }>, res: Respon
     try {
         const id = req.params.id;
 
-        const { salePrices } = req.body;
         const cartorder = await CartOrder.findByPk(id);
         if (!cartorder) {
             res.status(404).json({ message: "Updated cart order not found" });
             return;
         }
 
-        const newSalePrices = toNumber(salePrices);
         const promotionValues = await buildCartPromotionValues({
             productid: cartorder.productid,
             paidQuantity: getPaidQuantity(cartorder),
-            salePrices: newSalePrices,
         });
 
         await cartorder.update({
-            salePrices: newSalePrices,
             ...promotionValues,
             updatedAt: new Date(),
         });
@@ -389,7 +443,6 @@ export const addOrderBarcode = async (req: Request, res: Response) => {
         }
 
         const productid = toNumber(pos.dataValues.product_uuid);
-        const salePrices = toNumber(pos.dataValues.sellPrices);
         // ✅ Check existing cart item
         const existingOrder = await CartOrder.findOne({
             where: { productid, userbyid },
@@ -402,14 +455,12 @@ export const addOrderBarcode = async (req: Request, res: Response) => {
             const promotionValues = await buildCartPromotionValues({
                 productid: existingOrder.productid,
                 paidQuantity,
-                salePrices,
                 transaction: t,
             });
 
             await CartOrder.update(
                 {
                     ...promotionValues,
-                    salePrices,
                     updatedAt: new Date(),
                 },
                 {
@@ -426,7 +477,6 @@ export const addOrderBarcode = async (req: Request, res: Response) => {
             const promotionValues = await buildCartPromotionValues({
                 productid,
                 paidQuantity: Math.max(toNumber(quantity, 1), 1),
-                salePrices,
                 transaction: t,
             });
 
@@ -435,7 +485,6 @@ export const addOrderBarcode = async (req: Request, res: Response) => {
                     cart_uuid: new_uuid,
                     productid,
                     ...promotionValues,
-                    salePrices,
                     userbyid,
                 },
                 { transaction: t }

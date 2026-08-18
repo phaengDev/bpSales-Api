@@ -4,7 +4,8 @@ import { sequelize } from "../config/database";
 // ✅ Define attributes
 interface ProvincesAttributes {
     _uuid: number;
-    provinceName: string;
+    name_la: string;
+    name_en: string;
     status: number;
     createdAt: Date;
     updatedAt: Date;
@@ -14,7 +15,7 @@ interface ProvincesCreationAttributes extends Optional<ProvincesAttributes, "_uu
 export class Provinces extends Model<ProvincesAttributes, ProvincesCreationAttributes> {
 
     public _uuid!: number;
-    public provinceName!: string;
+    public name_la!: string;
     public status!: number;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -27,7 +28,11 @@ Provinces.init(
             primaryKey: true,
             autoIncrement: true,
         },
-        provinceName: {
+        name_la: {
+            type: DataTypes.STRING,
+            allowNull: false,
+        },
+        name_en: {
             type: DataTypes.STRING,
             allowNull: false,
         },

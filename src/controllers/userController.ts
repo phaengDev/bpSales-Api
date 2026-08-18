@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import Users from "../models/Users.controller";
+import Users from "../models/Users.Model";
 import { maxid } from "../utils";
 // import jwt from "jsonwebtoken";
 const bcrypt = require('bcryptjs');
@@ -50,7 +50,7 @@ export const createUser = async (
     req.body.user_uuid = new_uuid;
      req.body.password = hashedPassword;
 
-    const existingUser = await Users.findOne({ where: { phones: req.body.phones } });
+    const existingUser = await Users.findOne({ where: { phone: req.body.phone } });
     if (existingUser) {
       res.status(409).json({ error: "User with this phone number already exists" });
       return;

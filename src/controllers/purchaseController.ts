@@ -6,10 +6,10 @@ import Purchase from "../models/Purchase";
 import PurchaseList from "../models/PurchaseList";
 import Suppliers from "../models/Suppliers";
 import Products from "../models/Products";
-import Units from "../models/Units.controller";
-import Sizes from "../models/Sizes.controller";
+import Units from "../models/Units.Model";
+import Sizes from "../models/Sizes.Model";
 import Brands from "../models/Brands";
-import Shops from "../models/Shops.controller";
+import Shops from "../models/Shops.Model";
 
 const days = moment().format("YYMMDD").toString();
 interface QueryParams {

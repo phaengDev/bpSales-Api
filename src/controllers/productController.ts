@@ -6,9 +6,9 @@ import Products from "../models/Products";
 import { generateBarCode, maxsku } from "../utils/generateBarCode";
 import Brands from "../models/Brands";
 import Categories from "../models/Categories";
-import Sizes from "../models/Sizes.controller";
-import Units from "../models/Units.controller";
-import Wholesale from "../models/Wholesale";
+import Sizes from "../models/Sizes.Model";
+import Units from "../models/Units.Model";
+
 import { sequelize } from "../config/database";
 import { Toppings } from "../models/Toppings.model";
 import Promotion from "../models/Promotion";
@@ -362,10 +362,7 @@ export const getProducts = async (req: Request<{}, {}, {}, QueryParams>, res: Re
                     model: Sizes,
                     as: "size",
                 },
-                {
-                    model: Wholesale,
-                    as: "price",
-                },
+               
                 {
                     model: Toppings,
                     as: "toppings",
@@ -427,10 +424,7 @@ export const getProductSales = async (req: Request<{}, {}, {}, QueryParams>, res
                 {
                     model: Sizes,
                     as: "size",
-                }, {
-                    model: Wholesale,
-                    as: "price",
-                }, {
+                },  {
                     model: Toppings,
                     as: "toppings",
                 },

@@ -2,7 +2,7 @@ import { DataTypes, Model, Optional } from "sequelize";
 import {sequelize} from "../config/database";
 import Suppliers from "./Suppliers";
 import PurchaseList from "./PurchaseList";
-import Shops from "./Shops.controller";
+import Shops from "./Shops.Model";
 // Define the attributes interface
 interface PurchaseAttributes {
   _uuid: number;

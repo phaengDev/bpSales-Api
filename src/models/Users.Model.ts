@@ -1,12 +1,13 @@
 import { DataTypes, Model, Optional } from "sequelize";
 import {sequelize} from "../config/database";
-import Shops from "./Shops.controller";
+import Shops from "./Shops.Model";
 // Define the attributes interface
 interface UserAttributes {
   user_uuid: number;
   shopid?: number | null;
+  facebookid?: number | null;
   userName?: string | null;
-  phones?: string | null;
+  phone?: string | null;
   password?: string | null;
   typeuser?: number | null;
   created?: number | null;
@@ -22,18 +23,19 @@ type UserCreationAttributes = Optional<UserAttributes, "user_uuid">;
 
 export class Users extends Model<UserAttributes, UserCreationAttributes>
   implements UserAttributes {
-  public user_uuid!: number;
-  public shopid!: number | null;
-  public userName!: string | null;
-  public phones!: string | null;
-  public password!: string | null;
-  public typeuser?: number | null;
-  public created?: number | null;
-  public updated?: number | null;
-  public deleted?: number | null;
-  public status!: number | null;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  declare user_uuid: number;
+  declare shopid: number | null;
+  declare facebookid:number | null;
+  declare userName: string | null;
+  declare phone: string | null;
+  declare password: string | null;
+  declare typeuser: number | null;
+  declare created: number | null;
+  declare updated: number | null;
+  declare deleted: number | null;
+  declare status: number | null;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
 }
 
 // Define model
@@ -48,11 +50,15 @@ Users.init(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    facebookid:{
+       type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     userName: {
       type: DataTypes.STRING(255),
       allowNull: true,
     },
-    phones: {
+    phone: {
       type: DataTypes.STRING(255),
       allowNull: true,
     },

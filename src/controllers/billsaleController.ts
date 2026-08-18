@@ -12,12 +12,14 @@ import moment from "moment";
 import CartOrder from "../models/CartOrder";
 import Products from "../models/Products";
 import Exchanges from "../models/Exchanges";
-import Units from "../models/Units.controller";
-import Shops from "../models/Shops.controller";
+import Units from "../models/Units.Model";
+import Shops from "../models/Shops.Model";
 import District from "../models/Districts";
-import Sizes from "../models/Sizes.controller";
-import Users from "../models/Users.controller";
-
+import Sizes from "../models/Sizes.Model";
+import Users from "../models/Users.Model";
+import UseTopping from "../models/UseToppings.model";
+import Toppings from "../models/Toppings.model";
+import Country from "../models/Country";
 interface QueryParams {
     limit?: string;
     skip?: string;
@@ -26,6 +28,19 @@ interface QueryParams {
 }
 const days = moment(new Date()).format("DD").toString();
 const codes = moment(new Date()).format("YYMMDD").toString();
+
+const toNumber = (value: unknown, defaultValue = 0) => {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) ? numberValue : defaultValue;
+};
+
+const toQuantity = (value: unknown, defaultValue = 1) => {
+    return Math.max(Math.trunc(toNumber(value, defaultValue)), 1);
+};
+
+const toFreeQuantity = (value: unknown) => {
+    return Math.max(Math.trunc(toNumber(value)), 0);
+};
 
 const toPlainObject = (value: any) => {
     if (!value) return value;
@@ -37,7 +52,7 @@ const formatTransportDetails = (transport: any) => {
     if (!item) return item;
 
     const destinationBranchName = [
-        item.province?.provinceName,
+        item.province?.name_la,
         item.branch_name,
     ].filter(Boolean).join(" - ");
 
@@ -63,45 +78,117 @@ const formatBillsaleTransport = (billsale: any) => {
     };
 };
 
-export const createBillsale = async (req: Request, res: Response) => {
-    try {
-        const { orderList } = req.body as any;
-        const new_uuid = await maxid(Billsales, "bill_uuid");
-        const newCode = await maxCode(Billsales, "billcode", codes);
-        const newNo = await codeNo(Billsales, "billno", `${days}-0`);
-        req.body.bill_uuid = new_uuid;
-        req.body.billcode = newCode;
-        req.body.billno = newNo;
 
-        const billsale = await Billsales.create(req.body);
-        if (billsale) {
-            for (const item of orderList) {
-                const _uuid = await maxid(BillsaleList, "_uuid");
-                const result = await BillsaleList.create({
-                    _uuid: _uuid,
-                    billsaleid: new_uuid,
-                    productid: item.productid,
-                    price_buy: item.price_buy,
-                    price_sales: item.price_sales,
-                    quantity: item.quantity,
-                    status: 1,
-                });
-                if (!result) {
-                    return res.status(500).json({ error: "Failed to create BillsaleList" });
-                }
-                if (item.stock === 1) {
-                    await Products.update(
-                        { quantity: literal(`quantity - ${item.quantity}`) },
-                        { where: { product_uuid: item.productid } }
-                    )
-                }
-                await CartOrder.destroy({ where: { cart_uuid: item.cart_uuid } });
+
+
+export const createBillsale = async (req: Request, res: Response) => {
+    const { orderList, ...billValues } = req.body as any;
+    if (!Array.isArray(orderList) || orderList.length === 0) {
+        return res.status(400).json({ error: "orderList is required" });
+    }
+
+    const t = await Billsales.sequelize?.transaction();
+    try {
+        const new_uuid = await maxid(Billsales, "bill_uuid", { transaction: t });
+        const newCode = await maxCode(Billsales, "billcode", codes, t);
+        const newNo = await codeNo(Billsales, "billno", `${days}-0`);
+
+        const billsale = await Billsales.create(
+            {
+                ...billValues,
+                bill_uuid: new_uuid,
+                billcode: newCode,
+                billno: newNo,
+            },
+            { transaction: t }
+        );
+
+        for (const item of orderList) {
+            const cartorder = item.cart_uuid
+                ? await CartOrder.findByPk(item.cart_uuid, { transaction: t })
+                : null;
+            const productid = toNumber(cartorder?.productid ?? item.productid);
+            const product = await Products.findByPk(productid, { transaction: t });
+
+            if (!product) {
+                throw new Error(`Product not found: ${productid}`);
             }
-            if (!billsale) return res.status(404).json({ error: "Billsale not found" });
-            res.status(200).json({ message: "Billsale created successfully", data: billsale, billid: new_uuid });
+
+            const quantity = toQuantity(cartorder?.quantity ?? item.quantity);
+            const free = toFreeQuantity(
+                cartorder?.promotion ?? item.promotion ?? item.free
+            );
+            const priceBuy = toNumber(product.buyPrices);
+            const priceSales = toNumber(product.sellPrices);
+            const discount = free * priceSales;
+            const stockQuantity = quantity + free;
+            const list_uuid = await maxid(BillsaleList, "_uuid", { transaction: t });
+
+            await BillsaleList.create(
+                {
+                    _uuid:list_uuid,
+                    billsaleid: new_uuid,
+                    productid,
+                    price_buy: priceBuy,
+                    price_sales: priceSales,
+                    discount,
+                    quantity,
+                    free,
+                    status: 1,
+                },
+                { transaction: t }
+            );
+
+            if (product.stock === 1) {
+                await Products.update(
+                    { quantity: literal(`quantity - ${stockQuantity}`) },
+                    {
+                        where: { product_uuid: productid },
+                        transaction: t,
+                    }
+                );
+            }
+
+            const toppingid = cartorder?.toppingid ?? item.toppingid;
+            if (toppingid) {
+                const topping = await Toppings.findByPk(toppingid, {
+                    transaction: t,
+                });
+
+                if (topping) {
+                    const tuuid = await maxid(UseTopping, "_uuid", {
+                        transaction: t,
+                    });
+                    await UseTopping.create(
+                        {
+                            _uuid: tuuid,
+                            salesid: list_uuid,
+                            // productid,
+                            toppingName: topping.toppingName,
+                            prices: topping.prices,
+                            quantity,
+                            status: 1,
+                        },
+                        { transaction: t }
+                    );
+                }
+            }
+
+            if (cartorder) {
+                await cartorder.destroy({ transaction: t });
+            }
         }
+
+        await t?.commit();
+        return res.status(200).json({
+            message: "Billsale created successfully",
+            data: billsale,
+            billid: new_uuid,
+        });
     } catch (error) {
-        res.status(500).json({ error: "Failed to create Billsale" });
+        await t?.rollback();
+        console.error("Failed to create Billsale:", error);
+        return res.status(500).json({ error: "Failed to create Billsale" });
     }
 };
 
@@ -191,12 +278,12 @@ export const cancleBillsale = async (req: Request<{ id: string }, {}, {}, {}, Qu
 ) => {
     try {
         const bill_uuid = atob(req.params.id);
-           const {createby,description} = req.body as any;
+        const { createby, description } = req.body as any;
         const billsale = await Billsales.update({
             status: 2,
             statusoff: 1,
-            createby:createby,
-            description:description,
+            createby: createby,
+            description: description,
             updatedAt: new Date()
         },
             {
@@ -213,12 +300,12 @@ export const cancleBillsale = async (req: Request<{ id: string }, {}, {}, {}, Qu
                     { billsaleid: bill_uuid }
             });
 
-            await Transportation.update({
-                status: 2,
-                updatedAt: new Date()
-            },{
-                    where:{ billsaleid: bill_uuid }   
-            });
+        await Transportation.update({
+            status: 2,
+            updatedAt: new Date()
+        }, {
+            where: { billsaleid: bill_uuid }
+        });
 
         res.status(200).json({ message: "Billsale cancle successfully", data: billsale });
     } catch (error) {
@@ -231,7 +318,7 @@ export const fetchSaleDaily = async (
     res: Response
 ) => {
     try {
-        const limit = req.query.limit ? parseInt(req.query.limit, 10) : 10;
+        const limit = req.query.limit ? parseInt(req.query.limit, 10) : 100;
         const skip = req.query.skip ? parseInt(req.query.skip, 10) : 0;
         const orderBy = req.query.orderBy || "bill_uuid";
         const order = (req.query.order || "ASC").toUpperCase() as "ASC" | "DESC";
@@ -267,9 +354,9 @@ export const fetchSaleDaily = async (
             order: [[orderBy, order]],
             include: [
                 {
-                    model: Exchanges,
-                    as: "exchange",
-                    attributes: ["abbr", "icons", "rate", "genus"],
+                    model: Country,
+                    as: "country",
+                    attributes: ["abbr", "icons", "genus"],
                 },
                 {
                     model: Users,
@@ -358,19 +445,23 @@ export const getSalebyid = async (req: Request<{ id: string }>, res: Response) =
                                     model: Units,
                                     as: "unit",
                                     attributes: ["unitName"],
-                                },
+                                }
                             ],
+                        },
+                        {
+                            model: UseTopping,
+                            as: "topping",
                         },
                     ]
                 },
                 {
-                    model: Exchanges,
-                    as: "exchange",
+                    model: Country,
+                    as: "country",
                 },
                 {
                     model: Users,
                     as: "user",
-                    attributes: ["userName", "phones"],
+                    attributes: ["userName", "phone"],
                 },
                 {
                     model: Shops,
@@ -402,7 +493,7 @@ export const getSalebyid = async (req: Request<{ id: string }>, res: Response) =
                 }
             ]
         });
-        res.status(200).json(formatBillsaleTransport(result));
+        res.status(200).json({data: result });
     } catch (error) {
         res.status(500).json({ error: "Failed to fetch Billsale" });
     }
@@ -590,7 +681,7 @@ export const searchBillSale = async (req: Request, res: Response) => {
             ]
         });
 
-        
+
         if (!result) {
             return res.status(404).json({ error: "BillSale not found" });
         }

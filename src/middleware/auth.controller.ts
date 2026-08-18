@@ -2,7 +2,7 @@
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
-import Users from "../models/Users.controller";
+import Users from "../models/Users.Model";
 const JWT_SECRET = (process.env.JWT_SECRET ?? "Stock-Phaeng@2026").trim();
 /**
  * For a dedicated /auth/verify endpoint that just returns the decoded token.
@@ -37,13 +37,13 @@ export const getMe = async (req: Request, res: Response) => {
   try {
     const decoded: any = req.user || {};
     const byId = decoded.sub || decoded.user_uuid;     // รองรับทั้งสองแบบ
-    const byPhone = decoded.phones;
+    const byPhone = decoded.phone;
 
     let user;
     if (byId) {
       user = await Users.findByPk(byId, { attributes: { exclude: ["password"] } });
     } else if (byPhone) {
-      user = await Users.findOne({ where: { phones: byPhone }, attributes: { exclude: ["password"] } });
+      user = await Users.findOne({ where: { phone: byPhone }, attributes: { exclude: ["password"] } });
     }
 
     if (!user) {

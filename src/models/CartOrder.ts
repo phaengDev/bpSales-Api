@@ -103,9 +103,11 @@ CartOrder.init(
 CartOrder.belongsTo(Products, {
   foreignKey: "productid",
   as: "product",
-})
+});
+
 CartOrder.belongsTo(Toppings, {
   foreignKey: "toppingid",
   as: "topping",
-})
+});
+
 export default CartOrder;

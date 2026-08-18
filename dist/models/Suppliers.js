@@ -45,7 +45,7 @@ Suppliers.init({
         type: sequelize_1.DataTypes.STRING(255),
         allowNull: true,
     },
-    provinceName: {
+    name_la: {
         type: sequelize_1.DataTypes.STRING(255),
         allowNull: true,
     },

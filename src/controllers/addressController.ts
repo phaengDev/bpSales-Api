@@ -3,7 +3,7 @@ import Provinces from "../models/Provinces";
 import District from "../models/Districts";
 import Country from "../models/Country";
 import Company from "../models/Company";
-import Shops from "../models/Shops.controller";
+import Shops from "../models/Shops.Model";
 // ======== get province =======
 export const getProvince = async (req: Request, res: Response) => {
     try {

@@ -117,12 +117,12 @@ const getCustomer = async (req, res) => {
                 {
                     model: Districts_1.default,
                     as: "district",
-                    attributes: ["distName", "_uuid", "provinceid"],
+                    attributes: ["name_la", "_uuid", "provinceid"],
                     include: [
                         {
                             model: Provinces_1.default,
                             as: "province",
-                            attributes: ["provinceName", "_uuid"],
+                            attributes: ["name_la", "_uuid"],
                         }
                     ]
                 },

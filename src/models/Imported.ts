@@ -1,7 +1,7 @@
 import { DataTypes, Model, Optional } from "sequelize";
 import { sequelize } from "../config/database";
 import Products from "./Products";
-import Users from "./Users.controller";
+import Users from "./Users.Model";
 // Define the attributes interface
 interface ImportedAttributes {
   import_uuid: number;

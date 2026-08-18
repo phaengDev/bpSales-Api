@@ -23,7 +23,7 @@ const formatTransportationDetails = (transport: any) => {
     if (!item) return item;
 
     const destinationBranchName = [
-        item.province?.provinceName,
+        item.province?.name_la,
         item.branch_name,
     ].filter(Boolean).join(" - ");
 

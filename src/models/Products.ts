@@ -1,9 +1,8 @@
 import { DataTypes, Model } from "sequelize";
 import { sequelize } from "../config/database";
 import Brands from "./Brands";
-import Sizes from "./Sizes.controller";
-import Units from "./Units.controller";
-import Wholesale from './Wholesale';
+import Sizes from "./Sizes.Model";
+import Units from "./Units.Model";
 // Define the attributes interface
 interface ProductsAttributes {
   product_uuid: number;
@@ -160,5 +159,4 @@ Brands.hasMany(Products, { foreignKey: "brandid", as: "products" });
 
 Products.belongsTo(Sizes, { foreignKey: "sizeid", as: "size" });
 Products.belongsTo(Units, { foreignKey: "uniteid", as: "unit" });
-Products.hasMany(Wholesale, { foreignKey: "productid", as: "price" });
 export default Products;

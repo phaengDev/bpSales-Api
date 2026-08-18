@@ -13,7 +13,7 @@ Provinces.init({
         primaryKey: true,
         autoIncrement: true,
     },
-    provinceName: {
+    name_la: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: false,
     },
