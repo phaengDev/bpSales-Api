@@ -171,3 +171,37 @@ export const updateCustomerStatus = async (req: Request<{ id: string }>, res: Re
         res.status(500).json({ error: "Failed to update customer" });
     }
 };
+
+export const searchCustomer = async (req: Request<{}, {}, {}, QueryParams>, res: Response) => {
+    try {
+        const { shopid, types,phone } = req.body as any;
+        const whereConditions: any = {
+            shopid: shopid, 
+            status: 1,
+            phone: phone,
+        }
+        if (types) {
+            whereConditions.types = types;
+        }
+        const customer = await Customer.findOne({
+            where: whereConditions,
+            include: [
+                {
+                    model: District,
+                    as: "district",
+                    attributes: ["name_la","name_en", "_uuid","provinceid"],
+                    include: [
+                        {
+                            model: Provinces,
+                            as: "province",
+                            attributes: ["name_la","name_en", "_uuid"],
+                        }
+                    ]
+                },
+            ]
+        });
+        res.status(200).json({ data: customer });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch customer" });
+    }
+};

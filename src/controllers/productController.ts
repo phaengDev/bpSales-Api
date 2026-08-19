@@ -601,10 +601,11 @@ export const SearchProductbysku = async (req: Request, res: Response) => {
             shopid: shopid,
         };
 
-        // ✅ ค้นทั้งชื่อสินค้า และรหัสสินค้า
+        // ✅ ค้นทั้งรหัสสินค้า (sku) และบาร์โค้ด (barcode)
         if (searchTerm) {
             whereConditions[Op.or] = [
                 { sku: { [Op.like]: `%${searchTerm}%` } },
+                { barcode: { [Op.like]: `%${searchTerm}%` } },
             ];
         }
 
@@ -612,6 +613,7 @@ export const SearchProductbysku = async (req: Request, res: Response) => {
             where: whereConditions,
             attributes: [
                 "product_uuid",
+                "barcode",
                 "productName",
                 "sku",
                 "buyPrices",

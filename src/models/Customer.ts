@@ -6,6 +6,7 @@ import Districts from "./Districts";
 interface CustomerAttributes {
     _uuid: number;
     codes?: string | null;
+    shopid?: number | null;
     profiles?: string | null;
     gender?: string | null;
     first_name?: string | null;
@@ -28,6 +29,7 @@ export class Customer extends Model<CustomerAttributes, CustomerCreationAttribut
     implements CustomerAttributes {
     declare _uuid: number;
     declare codes: string | null;
+    declare shopid: number | null;
     declare profiles: string | null;
     declare gender: string | null;
     declare first_name: string | null;
@@ -44,6 +46,7 @@ export class Customer extends Model<CustomerAttributes, CustomerCreationAttribut
     declare readonly updatedAt: Date;
 }
 
+
 // Define model
 Customer.init(
     {
@@ -53,6 +56,10 @@ Customer.init(
             primaryKey: true,
         },
         codes: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        },
+        shopid: {
             type: DataTypes.INTEGER,
             allowNull: true,
         },

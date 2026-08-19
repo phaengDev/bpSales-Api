@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { fn, col, literal } from 'sequelize';
+import { fn, col, literal, Op } from 'sequelize';
 import { maxid, url } from "../utils";
 import CartOrder from "../models/CartOrder";
 import Products from "../models/Products";
@@ -71,7 +71,6 @@ const getProductSalePrice = async (
         attributes: ["sellPrices"],
         transaction,
     });
-
     return toNumber(product?.sellPrices);
 };
 
@@ -151,6 +150,188 @@ export const addOrder = async (req: Request, res: Response) => {
             { transaction: t }
         );
         // }
+        await t?.commit();
+        return res
+            .status(200)
+            .json({ message: "Order saved successfully", data: result });
+    } catch (error: any) {
+        // ✅ rollback ถ้ามี transaction
+        await t?.rollback();
+        console.error("Error adding order:", error);
+        return res.status(500).json({
+            error: "Failed to add order",
+            detail: error.message || "Unknown error",
+        });
+    }
+};
+
+
+export const addOrderbyPorduct = async (req: Request, res: Response) => {
+    const t = await CartOrder.sequelize?.transaction(); // ✅ ใช้ optional chaining ป้องกัน undefined
+    try {
+        const { userbyid, quantity = 1 } = req.body as any;
+        const productid = toNumber(req.body.productid);
+        if (!productid || !userbyid) {
+            await t?.rollback();
+            return res.status(400).json({ error: "Missing productid or userbyid" });
+        }
+        // ✅ ກວດວ່າສິນຄ້າມີຢູ່ ແລະ ຍັງເປີດຂາຍຢູ່
+        const product = await Products.findOne({
+            where: {
+                status: 1,
+                product_uuid: productid
+            },
+            transaction: t,
+        });
+        if (!product) {
+            await t?.rollback();
+            return res.status(404).json({ error: "Product not found" });
+        }
+        const addQuantity = Math.max(toNumber(quantity, 1), 1);
+
+        // ✅ ຄົ້ນຫາວ່າມີສິນຄ້າໃນ cart ຢູ່ແລ້ວຫຼືບໍ່
+        const existingOrder = await CartOrder.findOne({
+            where: { productid, userbyid },
+            transaction: t,
+        });
+
+        let result;
+        if (existingOrder) {
+            // ✅ ມີຢູ່ແລ້ວ → ບວກຈຳນວນເພີ່ມ ແລ້ວຄິດໄລ່ໂປຣໂມຊັ່ນຄືນໃໝ່
+            const paidQuantity = getPaidQuantity(existingOrder) + addQuantity;
+            const promotionValues = await buildCartPromotionValues({
+                productid,
+                paidQuantity,
+                transaction: t,
+            });
+
+            await CartOrder.update(
+                {
+                    ...promotionValues,
+                    updatedAt: new Date(),
+                },
+                { where: { productid, userbyid }, transaction: t }
+            );
+
+            // ✅ ດຶງຂໍ້ມູນທີ່ອັບເດດຫຼ້າສຸດ
+            result = await CartOrder.findOne({
+                where: { productid, userbyid }, transaction: t,
+            });
+        } else {
+            // ✅ ຍັງບໍ່ມີໃນ cart → ສ້າງລາຍການໃໝ່
+            const new_uuid = await maxid(CartOrder, "cart_uuid", { transaction: t });
+            const promotionValues = await buildCartPromotionValues({
+                productid,
+                paidQuantity: addQuantity,
+                transaction: t,
+            });
+
+            result = await CartOrder.create(
+                {
+                    cart_uuid: new_uuid,
+                    productid,
+                    ...promotionValues,
+                    userbyid,
+                },
+                { transaction: t }
+            );
+        }
+
+        await t?.commit();
+        return res
+            .status(200)
+            .json({ message: "Order saved successfully", data: result });
+    } catch (error: any) {
+        // ✅ rollback ถ้ามี transaction
+        await t?.rollback();
+        console.error("Error adding order:", error);
+        return res.status(500).json({
+            error: "Failed to add order",
+            detail: error.message || "Unknown error",
+        });
+    }
+};
+
+
+export const addOrderScan = async (req: Request, res: Response) => {
+    const t = await CartOrder.sequelize?.transaction(); // ✅ ใช้ optional chaining ป้องกัน undefined
+    try {
+        const { shopid, barcode, sku, userbyid, quantity = 1 } = req.body as any;
+        // ✅ ຄ່າທີ່ສະແກນມາ ອາດເປັນ barcode ຫຼື sku ກໍ່ໄດ້
+        const scanCode = String(barcode ?? sku ?? "").trim();
+        if (!scanCode || !userbyid || !shopid) {
+            await t?.rollback();
+            return res.status(400).json({ error: "Missing barcode/sku, userbyid or shopid" });
+        }
+
+        // ✅ ຄົ້ນຫາສິນຄ້າດ້ວຍ barcode ຫຼື sku
+        const product = await Products.findOne({
+            where: {
+                shopid,
+                status: 1,
+                [Op.or]: [
+                    { barcode: scanCode },
+                    { sku: scanCode },
+                ],
+            },
+            transaction: t,
+        });
+        if (!product) {
+            await t?.rollback();
+            return res.status(404).json({ error: "Product not found" });
+        }
+
+        const productid = toNumber(product.product_uuid);
+        const addQuantity = Math.max(toNumber(quantity, 1), 1);
+
+        // ✅ ຄົ້ນຫາວ່າມີສິນຄ້າໃນ cart ຢູ່ແລ້ວຫຼືບໍ່
+        const existingOrder = await CartOrder.findOne({
+            where: { productid, userbyid },
+            transaction: t,
+        });
+
+        let result;
+        if (existingOrder) {
+            // ✅ ມີຢູ່ແລ້ວ → ບວກຈຳນວນເພີ່ມ ແລ້ວຄິດໄລ່ໂປຣໂມຊັ່ນຄືນໃໝ່
+            const paidQuantity = getPaidQuantity(existingOrder) + addQuantity;
+            const promotionValues = await buildCartPromotionValues({
+                productid,
+                paidQuantity,
+                transaction: t,
+            });
+
+            await CartOrder.update(
+                {
+                    ...promotionValues,
+                    updatedAt: new Date(),
+                },
+                { where: { productid, userbyid }, transaction: t }
+            );
+
+            // ✅ ດຶງຂໍ້ມູນທີ່ອັບເດດຫຼ້າສຸດ
+            result = await CartOrder.findOne({
+                where: { productid, userbyid }, transaction: t,
+            });
+        } else {
+            // ✅ ຍັງບໍ່ມີໃນ cart → ສ້າງລາຍການໃໝ່
+            const new_uuid = await maxid(CartOrder, "cart_uuid", { transaction: t });
+            const promotionValues = await buildCartPromotionValues({
+                productid,
+                paidQuantity: addQuantity,
+                transaction: t,
+            });
+
+            result = await CartOrder.create(
+                {
+                    cart_uuid: new_uuid,
+                    productid,
+                    ...promotionValues,
+                    userbyid,
+                },
+                { transaction: t }
+            );
+        }
+
         await t?.commit();
         return res
             .status(200)

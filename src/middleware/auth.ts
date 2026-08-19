@@ -23,13 +23,13 @@ declare global {
 }
 /**
  * POST /auth/login
- * Body: { phones: string, password: string }
+ * Body: { phone: string, password: string }
  */
 
 export const login = async (req: Request, res: Response) => {
   try {
     const { phone, password } = req.body as any;
-    if (!phone || !password) return res.status(400).json({ message: "phones and password are required" });
+    if (!phone || !password) return res.status(400).json({ message: "phone and password are required" });
 
     const user = await Users.findOne({
       where: { phone, status: 1 },
@@ -39,11 +39,11 @@ export const login = async (req: Request, res: Response) => {
       }
       ],
     });
-    if (!user) return res.status(401).json({ message: "Invalid phones or password" });
+    if (!user) return res.status(401).json({ message: "Invalid phone or password" });
 
     const hash: any = user.getDataValue("password");
     const ok = await bcrypt.compare(password, hash);
-    if (!ok) return res.status(401).json({ message: "Invalid phones or password" });
+    if (!ok) return res.status(401).json({ message: "Invalid phone or password" });
 
     if (!JWT_SECRET) return res.status(500).json({ message: "JWT secret not configured" });
     const payload = {

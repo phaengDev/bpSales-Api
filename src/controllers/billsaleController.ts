@@ -361,7 +361,7 @@ export const fetchSaleDaily = async (
                 {
                     model: Users,
                     as: "user",
-                    attributes: ["userName", "phones"],
+                    attributes: ["userName", "phone"],
                 },
                 {
                     model: Transportation,
@@ -620,7 +620,7 @@ export const searchBillSale = async (req: Request, res: Response) => {
                 {
                     model: Users,
                     as: "user",
-                    attributes: ["userName", "phones"],
+                    attributes: ["userName", "phone"],
                 },
                 {
                     model: Shops,
@@ -738,7 +738,7 @@ export const fetchBillCancel = async (
                 {
                     model: Users,
                     as: "user",
-                    attributes: ["userName", "phones"],
+                    attributes: ["userName", "phone"],
                 },
                 {
                     model: Transportation,

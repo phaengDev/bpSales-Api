@@ -33,6 +33,7 @@ import {
   updateCustomer,
   deleteCustomer,
   getCustomerOption,
+  searchCustomer,
   updateCustomerStatus
 } from "../controllers/customerController";
 
@@ -74,15 +75,17 @@ import {
   updateProduct, 
   deleteProduct,
   updatedStatus,
-getProductSales,
-getProductbyCategory,
-getProductbyBrand,
-getProductbySearch,
-SearchProductbysku,
-getProductOptions } from "../controllers/productController";
+  getProductSales,
+  getProductbyCategory,
+  getProductbyBrand,
+  getProductbySearch,
+  SearchProductbysku,
+  getProductOptions } from "../controllers/productController";
 // import order controller
 import {
   addOrder,
+  addOrderScan,
+  addOrderbyPorduct,
   getCartOrder,
   updateCartPlus,
   updateCartMinus,
@@ -132,6 +135,21 @@ import {createPurchase,
   getPurchaseById,
   getPurchaseBymain,
   searchBillPurchase} from "../controllers/purchaseController";
+// =========== import live CF controller
+import {
+  createLiveSession,
+  getLiveSession,
+  getLiveById,
+  closeLiveSession,
+  createLiveProduct,
+  getLiveProduct,
+  updateLiveProduct,
+  deleteLiveProduct,
+  fetchLiveComments,
+  createLiveOrder,
+  getLiveOrder,
+  cancelLiveOrder,
+  getLiveReport} from "../controllers/liveController";
 // =========== Transportation
 const router = Router();
 router.post("/auth/login", login);
@@ -164,6 +182,7 @@ router.delete("/supplier/:id", deleteSupplier);
 // ===== Customer routes
 router.post("/customer/fetch", getCustomer);
 router.post("/customer/option/", getCustomerOption);
+router.post("/customer/search", searchCustomer);
 router.post("/customer/create", createUpload("profile").single("profiles"), createCustomer);
 router.put("/customer/:id", createUpload("profile").single("profiles"), updateCustomer);
 router.delete("/customer/:id", deleteCustomer);
@@ -218,6 +237,8 @@ router.post("/purchase/search", searchBillPurchase);
 
 // ===== Order routes
 router.post("/order/create", addOrder);
+router.post("/order/create/product", addOrderbyPorduct);
+router.post("/order/create/scan", addOrderScan);
 router.get("/order/fetch/:id", getCartOrder);
 router.put("/order/plus/:id", updateCartPlus);
 router.put("/order/minus/:id", updateCartMinus);
@@ -233,6 +254,7 @@ router.delete("/cartimport/All/:id", deleteCartImportAll);
 router.get("/cartimport/fetch/:id", getCartImport);
 router.post("/cartimport/createbysku", addorderImportSku);
 router.post("/cartimport/barcode", addorderImportBarcode);
+
 // ====== Promotion routes
 router.post("/promotion/fetch/", getPrometion);
 router.post("/promotion/many", getPrometionhasMany);
@@ -256,5 +278,22 @@ router.put("/billsale/cancel/:id", cancleBillsale);
 router.post("/billsale/fetch/cancel", fetchBillCancel);
 // ========= Transportation routes
 router.post("/online/fetch", getTransportation);
+
+// ======= Live CF routes
+router.post("/live/create", createLiveSession);
+router.post("/live/fetch", getLiveSession);
+router.get("/live/report/:id", getLiveReport);
+router.put("/live/close/:id", closeLiveSession);
+// --- ສິນຄ້າທີ່ໄລ໌
+router.post("/live/product/create", createLiveProduct);
+router.get("/live/product/:id", getLiveProduct);
+router.put("/live/product/:id", updateLiveProduct);
+router.delete("/live/product/:id", deleteLiveProduct);
+// --- ຄອມເມັນ ແລະ ອໍເດີ CF
+router.post("/live/comments", fetchLiveComments);
+router.post("/live/order", createLiveOrder);
+router.get("/live/order/:id", getLiveOrder);
+router.put("/live/order/cancel/:id", cancelLiveOrder);
+router.get("/live/:id", getLiveById);
 
 export default router;

@@ -20,6 +20,7 @@ interface BillsalesAttributes {
   getCash?: number | null;
   getTransfer?: number | null;
   balance_pays?: number | null;
+  balance_due?: number | null;
   refund?: number | null;
   typesale?: number | null;
   status?: number | null;
@@ -50,6 +51,7 @@ export class Billsales extends Model<BillsalesAttributes, BillsalesCreationAttri
   public getCash!: number | null;
   public getTransfer!: number | null;
   public balance_pays!: number | null;
+  public balance_due!: number | null;
   public refund!: number | null;
   public typesale!: number | null;
   public status!: number | null;
@@ -123,6 +125,10 @@ Billsales.init(
     },
     balance_pays: {
       type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+    },
+    balance_due: {
+      type: DataTypes.DECIMAL(15, 2),
       allowNull: true,
     },
     refund: {
