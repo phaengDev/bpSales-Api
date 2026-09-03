@@ -63,7 +63,8 @@ LiveOrder.init(
       primaryKey: true,
     },
     liveid: {
-      type: DataTypes.INTEGER,
+      // ຕ້ອງເປັນ UNSIGNED ໃຫ້ກົງກັບ tbl_live_session.live_uuid (FK)
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
     },
     shopid: {
@@ -154,11 +155,11 @@ LiveOrder.init(
     timestamps: true,
   }
 );
-
 LiveOrder.belongsTo(LiveSession, { foreignKey: "liveid", as: "live" });
 LiveSession.hasMany(LiveOrder, { foreignKey: "liveid", as: "orders" });
-LiveOrder.belongsTo(Shops, { foreignKey: "shopid", as: "shop" });
-LiveOrder.belongsTo(Customer, { foreignKey: "customerid", as: "customer" });
-LiveOrder.belongsTo(Users, { foreignKey: "createby", as: "user" });
+// ຕາຕະລາງເກົ່າ (ຈັດການນອກ repo) → ບໍ່ສ້າງ FK constraint
+LiveOrder.belongsTo(Shops, { foreignKey: "shopid", as: "shop", constraints: false });
+LiveOrder.belongsTo(Customer, { foreignKey: "customerid", as: "customer", constraints: false });
+LiveOrder.belongsTo(Users, { foreignKey: "createby", as: "user", constraints: false });
 
 export default LiveOrder;

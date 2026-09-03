@@ -21,6 +21,7 @@ interface ProductsAttributes {
   vipPrice?: number | null;
   stock?: number | null;
   description?: string | null;
+  types: number | null;  //===== 1 ສິນຄ້າມີຈຳນວນຫຼາຍ 2 ສິນຄ້າດຽວ
   usage?: number | null;
   status?: number | null;
   createdAt?: Date | null;
@@ -50,6 +51,7 @@ export class Products extends Model<ProductsAttributes, ProductsCreationAttribut
   declare vipPrice: number | null;
   declare stock: number | null;
   declare description: string | null;
+  declare types: number | null;
   declare usage: number | null;
   declare status: number | null;
   declare readonly createdAt: Date;
@@ -125,6 +127,11 @@ Products.init(
       type: DataTypes.STRING(255),
       allowNull: true,
     },
+    types: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 1,
+    },
     usage: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -153,6 +160,7 @@ Products.init(
     timestamps: true, // Sequelize auto manages createdAt / updatedAt
   }
 );
+
 
 Products.belongsTo(Brands, { foreignKey: "brandid", as: "brand" });
 Brands.hasMany(Products, { foreignKey: "brandid", as: "products" });

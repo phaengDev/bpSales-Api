@@ -1,5 +1,5 @@
 import { Router } from "express";
-import {verifyToken, login } from "../middleware/auth";
+import {verifyToken, login, loginWithFacebook, linkFacebook } from "../middleware/auth";
 import { createUpload } from "../utils/uploadFile";
 import {getProvince, getDistrict, getCountry,
   getCompany,
@@ -16,7 +16,11 @@ import {
   deleteUser,
   getUsers,
   getUserById,
-  getUserOption
+  getUserOption,
+  getMyProfile,
+  updateMyPassword,
+  connectFacebook,
+  disconnectFacebook
 } from "../controllers/userController";
 // ======import supplier controller
 import {
@@ -71,6 +75,7 @@ import {
 } from "../controllers/sizeController";
 import { 
   getProducts, 
+  getProductsbyid,
   createProduct, 
   updateProduct, 
   deleteProduct,
@@ -126,7 +131,8 @@ import {createBillsale,
   fetchSaleList,
   searchBillSale,
   cancleBillsale,
-  fetchBillCancel} from "../controllers/billsaleController";
+  fetchBillCancel,
+  closeSaleDaily} from "../controllers/billsaleController";
 import {getTransportation} from "../controllers/transonrtation";
 // ========== import billsale
 import {createImport,getImportAll} from "../controllers/importController";
@@ -153,6 +159,8 @@ import {
 // =========== Transportation
 const router = Router();
 router.post("/auth/login", login);
+router.post("/auth/facebook", loginWithFacebook);
+router.post("/auth/facebook/link", linkFacebook);
 
 router.get("/address/province", getProvince);
 router.get("/address/district/pv/:id", getDistrict);
@@ -169,6 +177,11 @@ router.post("/user/create", createUser);
 router.put("/user/:id", updateUser);
 router.delete("/user/:id", deleteUser);
 router.get("/user/option/:id", getUserOption);
+// ===== ໂປຣໄຟລ໌ຂອງຕົນເອງ (ອີງ user_uuid ຈາກ token)
+router.get("/user/profile/me", getMyProfile);
+router.put("/user/profile/password", updateMyPassword);
+router.post("/user/profile/facebook", connectFacebook);
+router.delete("/user/profile/facebook", disconnectFacebook);
 // ====================
 router.get("/exchange/fetch/:id", getExchange);
 router.post("/exchange/create", createExchange);
@@ -215,6 +228,7 @@ router.put("/size/:id", updateSize);
 router.delete("/size/:id", deleteSize);
 // ==== Product routes
 router.post("/product/fetch", getProducts);
+router.get("/product/byid/:id", getProductsbyid);
 router.post("/product/create", createUpload("product").single("images"), createProduct);
 router.put("/product/:id", createUpload("product").single("images"), updateProduct);
 router.delete("/product/:id", deleteProduct);
@@ -276,6 +290,7 @@ router.post("/billsale/fetch/list", fetchSaleList);
 router.post("/billsale/search", searchBillSale);
 router.put("/billsale/cancel/:id", cancleBillsale);
 router.post("/billsale/fetch/cancel", fetchBillCancel);
+router.put("/billsale/offsale", closeSaleDaily);
 // ========= Transportation routes
 router.post("/online/fetch", getTransportation);
 

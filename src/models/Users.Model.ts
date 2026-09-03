@@ -5,7 +5,8 @@ import Shops from "./Shops.Model";
 interface UserAttributes {
   user_uuid: number;
   shopid?: number | null;
-  facebookid?: number | null;
+  // ID ຈາກ Facebook ຍາວເກີນ INT (ຮອດ 17 ຕົວເລກ) — ຕ້ອງເກັບເປັນ string
+  facebookid?: string | null;
   userName?: string | null;
   phone?: string | null;
   password?: string | null;
@@ -25,7 +26,7 @@ export class Users extends Model<UserAttributes, UserCreationAttributes>
   implements UserAttributes {
   declare user_uuid: number;
   declare shopid: number | null;
-  declare facebookid:number | null;
+  declare facebookid: string | null;
   declare userName: string | null;
   declare phone: string | null;
   declare password: string | null;
@@ -50,8 +51,8 @@ Users.init(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    facebookid:{
-       type: DataTypes.INTEGER,
+    facebookid: {
+      type: DataTypes.STRING(32),
       allowNull: true,
     },
     userName: {

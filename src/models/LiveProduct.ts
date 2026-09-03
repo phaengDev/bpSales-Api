@@ -58,7 +58,8 @@ LiveProduct.init(
       primaryKey: true,
     },
     liveid: {
-      type: DataTypes.INTEGER,
+      // ຕ້ອງເປັນ UNSIGNED ໃຫ້ກົງກັບ tbl_live_session.live_uuid (FK)
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
     },
     shopid: {
@@ -66,7 +67,8 @@ LiveProduct.init(
       allowNull: true,
     },
     productid: {
-      type: DataTypes.INTEGER,
+      // ຕ້ອງເປັນ UNSIGNED ໃຫ້ກົງກັບ tbl_products.product_uuid
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
     },
     code: {
@@ -138,14 +140,15 @@ LiveProduct.init(
     tableName: "tbl_live_product",
     modelName: "LiveProduct",
     timestamps: true,
-    indexes: [
-      { name: "uq_live_product_code", unique: true, fields: ["liveid", "code"] },
-    ],
+    // indexes: [
+    //   { name: "uq_live_product_code", unique: true,
+    //      fields: ["liveid", "code"] },
+    // ],
   }
 );
-
 LiveProduct.belongsTo(LiveSession, { foreignKey: "liveid", as: "live" });
 LiveSession.hasMany(LiveProduct, { foreignKey: "liveid", as: "liveProducts" });
-LiveProduct.belongsTo(Products, { foreignKey: "productid", as: "product" });
+// tbl_products ຖືກຈັດການນອກ repo ນີ້ → ບໍ່ສ້າງ FK constraint
+LiveProduct.belongsTo(Products, { foreignKey: "productid", as: "product", constraints: false });
 
 export default LiveProduct;

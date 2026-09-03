@@ -13,7 +13,8 @@ export const createCategories = async (req: Request, res: Response) => {
     try {
         const new_uuid = await maxid(Categories, "cate_uuid");
         req.body.cate_uuid = new_uuid;
-        const newCode = await maxCode(Categories, "cateCode", "CAT");
+        const whshopid = { shopid: req.body.shopid };
+        const newCode = await maxCode(Categories, "cateCode", "CAT", whshopid);
         req.body.cateCode = newCode;
         const existing = await Categories.findOne({ where: { cateName: req.body.cateName } });
         if (existing) {

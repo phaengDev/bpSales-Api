@@ -90,7 +90,8 @@ export const createBillsale = async (req: Request, res: Response) => {
     const t = await Billsales.sequelize?.transaction();
     try {
         const new_uuid = await maxid(Billsales, "bill_uuid", { transaction: t });
-        const newCode = await maxCode(Billsales, "billcode", codes, t);
+        const whshopid = { shopid: billValues.shopid };
+        const newCode = await maxCode(Billsales, "billcode", codes, whshopid, t);
         const newNo = await codeNo(Billsales, "billno", `${days}-0`);
 
         const billsale = await Billsales.create(
@@ -196,7 +197,8 @@ export const createOnline = async (req: Request, res: Response) => {
     try {
         const { orderList } = req.body as any;
         const new_uuid = await maxid(Billsales, "bill_uuid");
-        const newCode = await maxCode(Billsales, "billcode", "BIL");
+        const whshopid = { shopid: req.body.shopid };
+        const newCode = await maxCode(Billsales, "billcode", "BIL", whshopid);
         const newNo = await codeNo(Billsales, "billno", `${days}0`);
         req.body.bill_uuid = new_uuid;
         req.body.billcode = newCode;
@@ -279,6 +281,17 @@ export const cancleBillsale = async (req: Request<{ id: string }, {}, {}, {}, Qu
     try {
         const bill_uuid = atob(req.params.id);
         const { createby, description } = req.body as any;
+
+        // ບິນທີ່ປິດຍອດແລ້ວ (statusoff = 2) ຍົກເລີກບໍ່ໄດ້
+        const current = await Billsales.findByPk(bill_uuid);
+        if (!current) return res.status(404).json({ error: "Billsale not found" });
+        if (Number(current.statusoff) === 2) {
+            return res.status(409).json({ error: "ບິນນີ້ປິດຍອດແລ້ວ ບໍ່ສາມາດຍົກເລີກໄດ້" });
+        }
+        if (Number(current.status) === 2) {
+            return res.status(409).json({ error: "ບິນນີ້ຖືກຍົກເລີກໄປແລ້ວ" });
+        }
+
         const billsale = await Billsales.update({
             status: 2,
             statusoff: 1,
@@ -318,7 +331,8 @@ export const fetchSaleDaily = async (
     res: Response
 ) => {
     try {
-        const limit = req.query.limit ? parseInt(req.query.limit, 10) : 100;
+        // ຖ້າບໍ່ໄດ້ສົ່ງ limit ແລະ skip ມາ = ບໍ່ຕ້ອງ limit (ດຶງທັງໝົດ)
+        const limit = req.query.limit ? parseInt(req.query.limit, 10) : null;
         const skip = req.query.skip ? parseInt(req.query.skip, 10) : 0;
         const orderBy = req.query.orderBy || "bill_uuid";
         const order = (req.query.order || "ASC").toUpperCase() as "ASC" | "DESC";
@@ -349,8 +363,7 @@ export const fetchSaleDaily = async (
 
         const { rows, count } = await Billsales.findAndCountAll({
             where: whereConditions,
-            limit,
-            offset: skip,
+            ...(limit !== null ? { limit, offset: skip } : {}),
             order: [[orderBy, order]],
             include: [
                 {
@@ -416,7 +429,7 @@ export const fetchSaleDaily = async (
             data,
             total: count,
             summary,
-            limit,
+            limit: limit ?? count,
             skip
         });
 
@@ -698,7 +711,7 @@ export const fetchBillCancel = async (
     res: Response
 ) => {
     try {
-        const limit = req.query.limit ? parseInt(req.query.limit, 10) : 10;
+        const limit = req.query.limit ? parseInt(req.query.limit, 10) : 100;
         const skip = req.query.skip ? parseInt(req.query.skip, 10) : 0;
         const orderBy = req.query.orderBy || "bill_uuid";
         const order = (req.query.order || "ASC").toUpperCase() as "ASC" | "DESC";
@@ -730,10 +743,10 @@ export const fetchBillCancel = async (
             offset: skip,
             order: [[orderBy, order]],
             include: [
-                {
-                    model: Exchanges,
-                    as: "exchange",
-                    attributes: ["abbr", "icons", "rate", "genus"],
+                 {
+                    model: Country,
+                    as: "country",
+                    attributes: ["abbr", "icons", "genus"],
                 },
                 {
                     model: Users,
@@ -757,10 +770,10 @@ export const fetchBillCancel = async (
             ],
         });
 
-        const data = rows.map(formatBillsaleTransport);
+        // const data = rows.map(formatBillsaleTransport);
 
         res.status(200).json({
-            data,
+            data:rows,
             total: count,
             limit,
             skip
@@ -769,5 +782,42 @@ export const fetchBillCancel = async (
     } catch (error) {
         console.log(error);
         res.status(500).json({ error: "Failed to fetch Billsales" });
+    }
+};
+
+// ========= ປິດຍອດການຂາຍປະຈຳວັນ (ຕັ້ງ statusoff = 2)
+// ບິນທີ່ປິດຍອດແລ້ວຈະຍົກເລີກບໍ່ໄດ້ອີກ
+export const closeSaleDaily = async (req: Request, res: Response) => {
+    try {
+        const { shopid, start_date, end_date } = req.body as any;
+        if (!shopid) return res.status(400).json({ error: "shopid is required" });
+
+        const startDate = moment(start_date).startOf("day").toDate();
+        const endDate = moment(end_date || start_date).endOf("day").toDate();
+
+        const whereConditions: any = {
+            shopid,
+            status: 1,
+            statusoff: 1,
+            createdAt: { [Op.between]: [startDate, endDate] },
+        };
+
+        const waiting = await Billsales.count({ where: whereConditions });
+        if (!waiting) {
+            return res.status(409).json({ error: "ບໍ່ມີບິນທີ່ຍັງບໍ່ໄດ້ປິດຍອດໃນຊ່ວງວັນທີນີ້" });
+        }
+
+        await Billsales.update(
+            { statusoff: 2, updatedAt: new Date() },
+            { where: whereConditions }
+        );
+
+        res.status(200).json({
+            message: `ປິດຍອດ ${waiting} ບິນສຳເລັດ`,
+            data: { closed: waiting, start_date: startDate, end_date: endDate },
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ error: "Failed to close Billsales" });
     }
 };

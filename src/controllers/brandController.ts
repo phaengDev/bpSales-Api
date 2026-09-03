@@ -15,9 +15,18 @@ export const createBrand = async (req: Request, res: Response) => {
     try {
         const new_uuid = await maxid(Brands, "brand_uuid");
         req.body.brand_uuid = new_uuid;
-        const newCode = await maxCode(Brands, "brandCode", "BN");
+        const cated= await Categories.findOne({
+            attributes:["cateCode"],
+            where:{cate_uuid: req.body.categorieid
+            }})
+        if(!cated) return res.status(404).json({ error: "Categories not found" });
+        // 🔹 ตัด 3 ตัวท้ายของ cateCode มาเป็น prefix เช่น "CAT-0012" → "012"
+        const prefix = cated.cateCode ? cated.cateCode.slice(-3) : "001";
+        const categorieid = { categorieid: req.body.categorieid };
+        const newCode = await maxCode(Brands, "brandCode", prefix, categorieid);
         req.body.brandCode = newCode;
         const brand = await Brands.create(req.body);
+        if(!brand) return res.status(404).json({ error: "Brand not found" });
         res.status(200).json({ message: "Brand created successfully", data: brand });
     } catch (error) {
         res.status(500).json({ error: "Failed to create brand" });

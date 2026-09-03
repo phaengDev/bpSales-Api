@@ -175,8 +175,8 @@ LiveSession.init(
     timestamps: true,
   }
 );
-
-LiveSession.belongsTo(Shops, { foreignKey: "shopid", as: "shop" });
-LiveSession.belongsTo(Users, { foreignKey: "createby", as: "user" });
+// tbl_shops / tbl_users ຖືກຈັດການນອກ repo ນີ້ → ບໍ່ສ້າງ FK constraint
+LiveSession.belongsTo(Shops, { foreignKey: "shopid", as: "shop", constraints: false });
+LiveSession.belongsTo(Users, { foreignKey: "createby", as: "user", constraints: false });
 
 export default LiveSession;

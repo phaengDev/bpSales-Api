@@ -54,19 +54,22 @@ LiveOrderList.init(
       primaryKey: true,
     },
     orderid: {
-      type: DataTypes.INTEGER,
+      // ຕ້ອງເປັນ UNSIGNED ໃຫ້ກົງກັບ tbl_live_order.order_uuid (FK)
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
     },
     liveid: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
     },
     liveproductid: {
-      type: DataTypes.INTEGER,
+      // ຕ້ອງເປັນ UNSIGNED ໃຫ້ກົງກັບ tbl_live_product._uuid (FK)
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
     },
     productid: {
-      type: DataTypes.INTEGER,
+      // ຕ້ອງເປັນ UNSIGNED ໃຫ້ກົງກັບ tbl_products.product_uuid
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
     },
     code: {
@@ -132,10 +135,10 @@ LiveOrderList.init(
     ],
   }
 );
-
 LiveOrderList.belongsTo(LiveOrder, { foreignKey: "orderid", as: "order" });
 LiveOrder.hasMany(LiveOrderList, { foreignKey: "orderid", as: "orderList" });
 LiveOrderList.belongsTo(LiveProduct, { foreignKey: "liveproductid", as: "liveProduct" });
-LiveOrderList.belongsTo(Products, { foreignKey: "productid", as: "product" });
+// tbl_products ຖືກຈັດການນອກ repo ນີ້ → ບໍ່ສ້າງ FK constraint
+LiveOrderList.belongsTo(Products, { foreignKey: "productid", as: "product", constraints: false });
 
 export default LiveOrderList;

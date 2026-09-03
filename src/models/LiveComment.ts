@@ -51,7 +51,8 @@ LiveComment.init(
       primaryKey: true,
     },
     liveid: {
-      type: DataTypes.INTEGER,
+      // ຕ້ອງເປັນ UNSIGNED ໃຫ້ກົງກັບ tbl_live_session.live_uuid (FK)
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
     },
     commentid: {
@@ -89,7 +90,8 @@ LiveComment.init(
       defaultValue: 0,
     },
     liveproductid: {
-      type: DataTypes.INTEGER,
+      // ຕ້ອງເປັນ UNSIGNED ໃຫ້ກົງກັບ tbl_live_product._uuid (FK)
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
     },
     status: {

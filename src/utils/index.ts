@@ -1,4 +1,4 @@
-import { ModelStatic, Transaction, Model, Op, Sequelize } from "sequelize";
+import { ModelStatic, Transaction, Model, Op, Sequelize, WhereOptions } from "sequelize";
 // const start = new Date().getFullYear();
 export function url() {
   return 'http://localhost:3707/image'; // no need to be async
@@ -88,21 +88,44 @@ export const billno = async (
 };
 
 
+/**
+ * maxCode(Categories, "cateCode", "CAT", { shopid: req.body.shopid })
+ * 🔹 where = เงื่อนไขตรง ๆ ของตารางนั้น (ตารางไหนไม่มี shopid ก็ไม่ต้องส่ง)
+ * 🔹 transaction = ส่งมาเมื่ออยู่ใน transaction จะ lock แถวล่าสุดให้
+ */
 export async function maxCode(
   model: ModelStatic<any>,
   column: string,
   prefix: string,
+  where: WhereOptions = {},
   transaction?: Transaction
 ): Promise<string> {
-  const maxResult = await model.findOne({
-    attributes: [[model.sequelize!.fn('MAX', model.sequelize!.col(column)), 'maxCode']],
+  // 🔹 ตัด key ที่เป็น undefined ทิ้ง (Sequelize จะ throw ถ้า where มีค่า undefined)
+  const cleanWhere = Object.fromEntries(
+    Object.entries(where as Record<string, unknown>).filter(([, v]) => v !== undefined)
+  ) as WhereOptions;
+
+  // 🔹 นับเฉพาะ prefix เดียวกัน (กันเลขของ prefix อื่นมาปน)
+  const prefixWhere: WhereOptions = { [column]: { [Op.like]: `${prefix}-%` } };
+  const finalWhere = { [Op.and]: [cleanWhere, prefixWhere] } as WhereOptions;
+
+  const lastRow = await model.findOne({
+    attributes: [column],
+    where: finalWhere,
+    // เรียงตามความยาวก่อน เพื่อให้ '10000' > '9999' (string sort จะได้ไม่ผิด)
+    order: [
+      [Sequelize.fn("CHAR_LENGTH", Sequelize.col(column)), "DESC"],
+      [column, "DESC"],
+    ],
     transaction,
+    ...(transaction ? { lock: transaction.LOCK.UPDATE } : {}),
     raw: true,
   });
 
-  let currentMaxCode: string = (maxResult as any)?.maxCode || `${prefix}-0000`;
-  let currentNumber = parseInt(currentMaxCode.replace(/\D/g, ""), 10) || 0;
-  let nextNumber = currentNumber + 1;
-  const formattedNumber = nextNumber.toString().padStart(4, '0'); // '000001'
+  const lastCode = (lastRow as any)?.[column] as string | undefined;
+  // ตัด prefix ออกก่อน แล้วค่อยอ่านเลขท้าย (prefix ที่มีตัวเลข เช่น '260822' จะได้ไม่ถูกนับ)
+  const suffix = lastCode ? lastCode.slice(prefix.length + 1).replace(/\D/g, "") : "";
+  const nextNumber = (parseInt(suffix, 10) || 0) + 1;
+  const formattedNumber = nextNumber.toString().padStart(4, "0"); // '0001'
   return `${prefix}-${formattedNumber}`;
 }

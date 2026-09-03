@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import Users from "../models/Users.Model";
+import Shops from "../models/Shops.Model";
+import { verifyFacebookToken } from "../middleware/auth";
 import { maxid } from "../utils";
 // import jwt from "jsonwebtoken";
 const bcrypt = require('bcryptjs');
@@ -108,6 +110,108 @@ export const deleteUser = async (req: Request<{ id: string }>, res: Response) =>
     res.status(200).json({ message: "User deleted successfully", data: user });
   } catch (error) {
     res.status(500).json({ error: "Failed to delete user" });
+  }
+};
+
+// ── ໂປຣໄຟລ໌ຂອງຕົນເອງ ──────────────────────────────────────────
+// ທຸກຟັງຊັນລຸ່ມນີ້ອີງ user_uuid ຈາກ token (req.user.sub) ບໍ່ແມ່ນຈາກ body
+// ຈຶ່ງແກ້ໄດ້ແຕ່ຂໍ້ມູນຂອງຕົນເອງເທົ່ານັ້ນ
+
+/** ຂໍ້ມູນຜູ້ໃຊ້ທີ່ login ຢູ່ (ພ້ອມຊື່ຮ້ານ) */
+export const getMyProfile = async (req: Request, res: Response) => {
+  try {
+    const user_uuid = req.user?.sub;
+    if (!user_uuid) return res.status(401).json({ error: "Unauthorized" });
+
+    const user = await Users.findByPk(user_uuid, {
+      attributes: { exclude: ["password"] },
+      include: [{ model: Shops, as: "shop" }],
+    });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.status(200).json({ data: user });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch profile" });
+  }
+};
+
+/** ອັບເດດສະເພາະລະຫັດຜ່ານ — ຕ້ອງຢືນຢັນລະຫັດຜ່ານເກົ່າກ່ອນ */
+export const updateMyPassword = async (req: Request, res: Response) => {
+  try {
+    const user_uuid = req.user?.sub;
+    if (!user_uuid) return res.status(401).json({ error: "Unauthorized" });
+
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: "oldPassword and newPassword are required" });
+    }
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({ error: "New password must be at least 6 characters" });
+    }
+
+    const user = await Users.findByPk(user_uuid);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const matched = bcrypt.compareSync(oldPassword, user.getDataValue("password") ?? "");
+    if (!matched) return res.status(401).json({ error: "Old password is incorrect" });
+
+    await user.update({
+      password: bcrypt.hashSync(newPassword, 10),
+      updatedAt: new Date(),
+    });
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update password" });
+  }
+};
+
+/** ຜູກ ID Facebook ເຂົ້າກັບຜູ້ໃຊ້ປັດຈຸບັນ — ຫຼັງຈາກນີ້ login ດ້ວຍ Facebook ໄດ້ */
+export const connectFacebook = async (req: Request, res: Response) => {
+  try {
+    const user_uuid = req.user?.sub;
+    if (!user_uuid) return res.status(401).json({ error: "Unauthorized" });
+
+    const { accessToken } = req.body;
+    if (!accessToken) return res.status(400).json({ error: "accessToken is required" });
+
+    const verified = await verifyFacebookToken(accessToken);
+    if (!verified.ok) return res.status(verified.status).json({ error: verified.message });
+
+    const user = await Users.findByPk(user_uuid);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // ບັນຊີ Facebook ດຽວ ຜູກໄດ້ກັບຜູ້ໃຊ້ດຽວເທົ່ານັ້ນ
+    const taken = await Users.findOne({ where: { facebookid: verified.facebookId } });
+    if (taken && String(taken.getDataValue("user_uuid")) !== String(user_uuid)) {
+      return res.status(409).json({ error: "This Facebook account is already linked to another user" });
+    }
+
+    await user.update({ facebookid: verified.facebookId, updatedAt: new Date() });
+
+    res.status(200).json({
+      message: "Facebook connected successfully",
+      data: { facebookid: verified.facebookId, facebookName: verified.name },
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to connect Facebook" });
+  }
+};
+
+/** ຍົກເລີກການເຊື່ອມຕໍ່ Facebook */
+export const disconnectFacebook = async (req: Request, res: Response) => {
+  try {
+    const user_uuid = req.user?.sub;
+    if (!user_uuid) return res.status(401).json({ error: "Unauthorized" });
+
+    const user = await Users.findByPk(user_uuid);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    await user.update({ facebookid: null, updatedAt: new Date() });
+
+    res.status(200).json({ message: "Facebook disconnected successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to disconnect Facebook" });
   }
 };
 

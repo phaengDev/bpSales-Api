@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Op, fn, col, literal, Transaction } from "sequelize";
+import { Op, fn, col, literal, Transaction, Model, ModelStatic } from "sequelize";
 import { maxid, url } from "../utils";
 import { deleteFile } from "../utils/uploadFile";
 import Products from "../models/Products";
@@ -12,6 +12,7 @@ import Units from "../models/Units.Model";
 import { sequelize } from "../config/database";
 import { Toppings } from "../models/Toppings.model";
 import Promotion from "../models/Promotion";
+import DetailPorduct from "../models/DetailPorduct";
 interface QueryParams {
     limit?: string;
     skip?: string;
@@ -19,12 +20,11 @@ interface QueryParams {
     order?: string;
 }
 
-interface ToppingPayload {
-    _uuid?: number;
-    toppingName?: unknown;
-    prices?: unknown;
-    status?: unknown;
-}
+/** ແຖວລູກຂອງສິນຄ້າ (toppings / details) */
+type ChildRow = Record<string, unknown> & { _uuid?: number };
+
+const TOPPING_FIELDS = ["toppingName", "prices", "status"] as const;
+const DETAIL_FIELDS = ["title", "name", "status"] as const;
 
 class ProductRequestError extends Error {
     constructor(
@@ -36,85 +36,107 @@ class ProductRequestError extends Error {
     }
 }
 
-const parseToppings = (rawToppings: unknown): ToppingPayload[] => {
-    if (rawToppings === undefined || rawToppings === null || rawToppings === "") {
+/**
+ * ຮັບໄດ້ທັງ array (multipart: details[0][title]) ແລະ JSON string
+ */
+const parseChildRows = (
+    raw: unknown,
+    label: string,
+    fields: readonly string[]
+): ChildRow[] => {
+    if (raw === undefined || raw === null || raw === "") {
         return [];
     }
-    let parsedToppings: unknown = rawToppings;
-    if (typeof rawToppings === "string") {
+
+    let parsed: unknown = raw;
+    if (typeof raw === "string") {
         try {
-            parsedToppings = JSON.parse(rawToppings);
+            parsed = JSON.parse(raw);
         } catch {
-            throw new ProductRequestError(400, "toppings must be a valid JSON array");
+            throw new ProductRequestError(400, `${label} must be a valid JSON array`);
         }
     }
 
-    if (!Array.isArray(parsedToppings)) {
-        throw new ProductRequestError(400, "toppings must be an array");
+    if (!Array.isArray(parsed)) {
+        throw new ProductRequestError(400, `${label} must be an array`);
     }
 
-    return parsedToppings.map((item) => {
+    return parsed.map((item) => {
         if (!item || typeof item !== "object" || Array.isArray(item)) {
-            throw new ProductRequestError(400, "Each topping must be an object");
+            throw new ProductRequestError(400, `Each ${label} row must be an object`);
         }
 
-        const topping = item as Record<string, unknown>;
-        const rawUuid = topping._uuid;
+        const source = item as Record<string, unknown>;
+        const rawUuid = source._uuid;
         let uuid: number | undefined;
 
         if (rawUuid !== undefined && rawUuid !== null && rawUuid !== "") {
             uuid = Number(rawUuid);
             if (!Number.isInteger(uuid) || uuid <= 0) {
-                throw new ProductRequestError(400, "Invalid topping _uuid");
+                throw new ProductRequestError(400, `Invalid ${label} _uuid`);
             }
         }
 
-        return {
-            _uuid: uuid,
-            toppingName: topping.toppingName,
-            prices: topping.prices,
-            status: topping.status,
-        };
+        const row: ChildRow = { _uuid: uuid };
+        for (const field of fields) {
+            if (source[field] !== undefined) row[field] = source[field];
+        }
+
+        return row;
     });
 };
 
-const getToppingValues = (topping: ToppingPayload): Record<string, unknown> => {
+const getChildValues = (
+    row: ChildRow,
+    fields: readonly string[]
+): Record<string, unknown> => {
     const values: Record<string, unknown> = {};
-
-    if (topping.toppingName !== undefined) values.toppingName = topping.toppingName;
-    if (topping.prices !== undefined) values.prices = topping.prices;
-    if (topping.status !== undefined) values.status = topping.status;
-
+    for (const field of fields) {
+        if (row[field] !== undefined) values[field] = row[field];
+    }
     return values;
 };
 
-const syncProductToppings = async (
+const buildChildRows = (
+    rows: ChildRow[],
+    fields: readonly string[],
+    productid: number
+): Record<string, unknown>[] =>
+    rows.map((row) => ({ ...getChildValues(row, fields), productid }));
+
+/**
+ * ຊິງຄ໌ແຖວລູກ: ລຶບອັນທີ່ບໍ່ໄດ້ສົ່ງມາ, ອັບເດດອັນທີ່ມີ _uuid, ເພີ່ມອັນໃໝ່
+ */
+const syncProductChildren = async (
+    model: ModelStatic<Model<any, any>>,
     productid: number,
-    toppings: ToppingPayload[],
+    rows: ChildRow[],
+    label: string,
+    fields: readonly string[],
     transaction: Transaction
 ): Promise<void> => {
-    const existingToppings = await Toppings.findAll({
+    const existingRows = await model.findAll({
         where: { productid },
         transaction,
         lock: transaction.LOCK.UPDATE,
     });
 
     const existingIds = new Set(
-        existingToppings.map((item) => Number(item._uuid))
+        existingRows.map((item) => Number(item.get("_uuid")))
     );
-    const incomingIds = toppings
+    const incomingIds = rows
         .filter((item) => item._uuid !== undefined)
         .map((item) => item._uuid as number);
 
     if (new Set(incomingIds).size !== incomingIds.length) {
-        throw new ProductRequestError(400, "Duplicate topping _uuid");
+        throw new ProductRequestError(400, `Duplicate ${label} _uuid`);
     }
 
     const invalidId = incomingIds.find((uuid) => !existingIds.has(uuid));
     if (invalidId !== undefined) {
         throw new ProductRequestError(
             400,
-            `Topping ${invalidId} does not belong to this product`
+            `${label} ${invalidId} does not belong to this product`
         );
     }
 
@@ -124,7 +146,7 @@ const syncProductToppings = async (
     );
 
     if (idsToDelete.length > 0) {
-        await Toppings.destroy({
+        await model.destroy({
             where: {
                 _uuid: { [Op.in]: idsToDelete },
                 productid,
@@ -133,68 +155,113 @@ const syncProductToppings = async (
         });
     }
 
-    for (const topping of toppings) {
-        if (topping._uuid === undefined) continue;
-        const values = getToppingValues(topping);
+    for (const row of rows) {
+        if (row._uuid === undefined) continue;
+        const values = getChildValues(row, fields);
         if (Object.keys(values).length === 0) continue;
-        await Toppings.update(values, {
-            where: { _uuid: topping._uuid, productid },
+        await model.update(values, {
+            where: { _uuid: row._uuid, productid },
             transaction,
         });
     }
 
-    const newToppings = toppings
-        .filter((item) => item._uuid === undefined)
-        .map((item) => ({
-            ...getToppingValues(item),
-            productid,
-        }));
-
-    if (newToppings.length > 0) {
-        await Toppings.bulkCreate(newToppings, { transaction });
+    const newRows = rows.filter((item) => item._uuid === undefined);
+    if (newRows.length > 0) {
+        await model.bulkCreate(buildChildRows(newRows, fields, productid), {
+            transaction,
+        });
     }
 };
+
+/** types: 1 = ສິນຄ້າຈຳນວນຫຼາຍ, 2 = ສິນຄ້າດຽວ (ມີລະຫັດສະເພາະເຄື່ອງ) */
+const normalizeTypes = (raw: unknown): number => (Number(raw) === 2 ? 2 : 1);
+
+/** ຄວາມສຳພັນລູກທີ່ຕິດມາກັບສິນຄ້າສະເໝີ */
+const productChildInclude = [
+    { model: Toppings, as: "toppings" },
+    { model: DetailPorduct, as: "details" },
+];
 
 // create product
 
 export const createProduct = async (req: Request, res: Response) => {
-    const t = await sequelize.transaction();
+    const uploadedImage = req.file?.filename;
+    let createCommitted = false;
+
     try {
-        const {toppings} = req.body;
-        const new_uuid = await maxid(Products, "product_uuid");
-        req.body.product_uuid = new_uuid;
+        const toppings = parseChildRows(req.body.toppings, "toppings", TOPPING_FIELDS);
+        const details = parseChildRows(req.body.details, "details", DETAIL_FIELDS);
 
-        const skuPrefix = req.body.sku || "";
-        const newSku = await maxsku(Products, "sku", skuPrefix);
+        const product = await sequelize.transaction(async (transaction) => {
+            const {
+                toppings: _ignoredToppings,
+                details: _ignoredDetails,
+                product_uuid: _ignoredProductUuid,
+                ...productData
+            } = req.body;
 
-        req.body.sku = newSku;
-        if (!req.body.barcode) {
-            req.body.barcode = await generateBarCode(req.body.shopid);
-        }
-        const images = req.file?.filename;
-        req.body.images = images || "";
-
-        const product = await Products.create(req.body);
-
-        if (toppings && toppings.length > 0) {
-            for (const topping of toppings) {
-                topping._uuid = await maxid(Toppings, "_uuid");
-                topping.productid = product.product_uuid;
-                await Toppings.create(topping, { transaction: t });
+            productData.product_uuid = await maxid(Products, "product_uuid", {
+                transaction,
+            });
+            productData.sku = await maxsku(
+                Products,
+                "sku",
+                req.body.sku || "",
+                transaction
+            );
+            if (!productData.barcode) {
+                productData.barcode = await generateBarCode(
+                    req.body.shopid,
+                    transaction
+                );
             }
-            await Toppings.bulkCreate(toppings);
+            productData.images = uploadedImage || "";
+            productData.types = normalizeTypes(req.body.types);
+
+            const created = await Products.create(productData, { transaction });
+
+            if (toppings.length > 0) {
+                await Toppings.bulkCreate(
+                    buildChildRows(toppings, TOPPING_FIELDS, created.product_uuid) as any,
+                    { transaction }
+                );
+            }
+
+            if (details.length > 0) {
+                await DetailPorduct.bulkCreate(
+                    buildChildRows(details, DETAIL_FIELDS, created.product_uuid) as any,
+                    { transaction }
+                );
+            }
+
+            return Products.findByPk(created.product_uuid, {
+                transaction,
+                include: productChildInclude,
+            });
+        });
+
+        createCommitted = true;
+
+        return res.status(200).json({
+            message: "Product created successfully",
+            data: product,
+        });
+    } catch (error) {
+        if (uploadedImage && !createCommitted) deleteFile("product", uploadedImage);
+
+        if (error instanceof ProductRequestError) {
+            return res.status(error.status).json({ error: error.message });
         }
 
-        await t.commit();
-        res.status(200).json({ message: "Product created successfully", data: product });
-    } catch (error) {
-        res.status(500).json({ error: "Failed to create product" });
+        console.error("createProduct error:", error);
+        return res.status(500).json({ error: "Failed to create product" });
     }
 };
 // update product
 export const updateProduct = async (req: Request<{ id: string }>, res: Response) => {
     const uploadedImage = req.file?.filename;
     const hasToppings = Object.prototype.hasOwnProperty.call(req.body, "toppings");
+    const hasDetails = Object.prototype.hasOwnProperty.call(req.body, "details");
     let updateCommitted = false;
 
     try {
@@ -209,7 +276,12 @@ export const updateProduct = async (req: Request<{ id: string }>, res: Response)
             throw new ProductRequestError(400, "Invalid product id");
         }
 
-        const toppings = hasToppings ? parseToppings(req.body.toppings) : [];
+        const toppings = hasToppings
+            ? parseChildRows(req.body.toppings, "toppings", TOPPING_FIELDS)
+            : [];
+        const details = hasDetails
+            ? parseChildRows(req.body.details, "details", DETAIL_FIELDS)
+            : [];
         let previousImage: string | null = null;
 
         const updatedProduct = await sequelize.transaction(async (transaction) => {
@@ -226,6 +298,7 @@ export const updateProduct = async (req: Request<{ id: string }>, res: Response)
 
             const {
                 toppings: _ignoredToppings,
+                details: _ignoredDetails,
                 product_uuid: _ignoredProductUuid,
                 createdAt: _ignoredCreatedAt,
                 images: _ignoredImages,
@@ -234,20 +307,37 @@ export const updateProduct = async (req: Request<{ id: string }>, res: Response)
 
             productData.updatedAt = new Date();
             if (uploadedImage) productData.images = uploadedImage;
+            if (productData.types !== undefined) {
+                productData.types = normalizeTypes(productData.types);
+            }
 
             await product.update(productData, { transaction });
 
             if (hasToppings) {
-                await syncProductToppings(
+                await syncProductChildren(
+                    Toppings,
                     product.product_uuid,
                     toppings,
+                    "topping",
+                    TOPPING_FIELDS,
+                    transaction
+                );
+            }
+
+            if (hasDetails) {
+                await syncProductChildren(
+                    DetailPorduct,
+                    product.product_uuid,
+                    details,
+                    "detail",
+                    DETAIL_FIELDS,
                     transaction
                 );
             }
 
             return Products.findByPk(product.product_uuid, {
                 transaction,
-                include: [{ model: Toppings, as: "toppings" }],
+                include: productChildInclude,
             });
         });
 
@@ -287,6 +377,7 @@ export const deleteProduct = async (req: Request, res: Response) => {
      const deleted=   await Products.destroy({ where: { product_uuid: product_uuid } });
      if(deleted){
         await Toppings.destroy({ where: { productid: product_uuid } });
+        await DetailPorduct.destroy({ where: { productid: product_uuid } });
         await Promotion.destroy({ where: { productid: product_uuid } });
      }
         res.status(200).json({ message: "Product deleted successfully" });
@@ -362,11 +453,7 @@ export const getProducts = async (req: Request<{}, {}, {}, QueryParams>, res: Re
                     model: Sizes,
                     as: "size",
                 },
-               
-                {
-                    model: Toppings,
-                    as: "toppings",
-                },
+                ...productChildInclude,
             ],
         })
         res.status(200).json({
@@ -377,6 +464,47 @@ export const getProducts = async (req: Request<{}, {}, {}, QueryParams>, res: Re
         });
     } catch (error) {
         res.status(500).json({ error: "Failed to fetch categories" });
+    }
+};
+
+export const getProductsbyid = async (req: Request<{id: string}>, res: Response) => {
+    try {
+        const productid = req.params.id;
+       
+        const product = await Products.findOne({
+            where: { product_uuid: productid },
+            attributes: {
+                include: [
+                    [fn("CONCAT", literal(`'${url()}/product/'`), col("images")), "url"],
+                ],
+            },
+            include: [
+                {
+                    model: Brands,
+                    as: "brand",
+                    include: [
+                        {
+                            model: Categories,
+                            as: "category",
+                        },
+                    ],
+                },
+                {
+                    model: Units,
+                    as: "unit",
+                },
+                {
+                    model: Sizes,
+                    as: "size",
+                },
+                ...productChildInclude,
+            ],
+        })
+        if (!product) return res.status(404).json({ error: "Product not found" });
+        res.status(200).json({data:product});
+    } catch (error) {
+        console.error("getProductsbyid error:", error);
+        res.status(500).json({ error: "Failed to fetch product" });
     }
 };
 
@@ -424,10 +552,8 @@ export const getProductSales = async (req: Request<{}, {}, {}, QueryParams>, res
                 {
                     model: Sizes,
                     as: "size",
-                },  {
-                    model: Toppings,
-                    as: "toppings",
                 },
+                ...productChildInclude,
             ],
         });
         res.status(200).json({
@@ -579,6 +705,15 @@ export const getProductbySearch = async (req: Request, res: Response) => {
                     model: Units,
                     as: "unit",
                     attributes: ["unitName"],
+                },
+                {
+                    model: Sizes,
+                    as: "size",
+                    attributes: ["sizeName"],
+                },
+                {
+                    model: DetailPorduct,
+                    as: "detail",
                 },
             ],
             order: [["product_uuid", "ASC"]],

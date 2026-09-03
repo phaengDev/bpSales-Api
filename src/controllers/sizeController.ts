@@ -13,6 +13,9 @@ export const createSize = async (req: Request, res: Response) => {
            const new_uuid = await maxid(Sizes, "size_uuid");
            req.body.size_uuid = new_uuid;
            const sizes = await Sizes.create(req.body);
+           if(!sizes){
+            return res.status(400).json({message:"Sizes not found"})
+           }
            res.status(200).json({ message: "Sizes created successfully", data: sizes });
        } catch (error) {
            res.status(500).json({ error: "Failed to create Sizes" });
