@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Op, fn, col, literal } from "sequelize";
+import { Op, fn, col, literal, where as sqWhere } from "sequelize";
 import { maxid, url } from "../utils";
 import Customer from "../models/Customer";
 import { deleteFile } from "../utils/uploadFile";
@@ -174,11 +174,58 @@ export const updateCustomerStatus = async (req: Request<{ id: string }>, res: Re
 
 export const searchCustomer = async (req: Request<{}, {}, {}, QueryParams>, res: Response) => {
     try {
-        const { shopid, types,phone } = req.body as any;
+        const { shopid, types, phone } = req.body as any;
         const whereConditions: any = {
-            shopid: shopid, 
+            shopid: shopid,
             status: 1,
-            phone: phone,
+        }
+        // ເບີໃນ DB ອາດເກັບເປັນ 8 ຫຼື 10 ຕົວ (ມີ 20 ນຳໜ້າ) → ທຽບ 8 ຕົວທ້າຍ
+        const digits = String(phone ?? "").replace(/\D/g, "");
+        if (digits) {
+            whereConditions[Op.and] = [
+                sqWhere(fn("RIGHT", col("phone"), 8), digits.slice(-8)),
+            ];
+        }
+        if (types) {
+            whereConditions.types = types;
+        }
+        const customer = await Customer.findOne({
+            where: whereConditions,
+            include: [
+                {
+                    model: District,
+                    as: "district",
+                    attributes: ["name_la","name_en", "_uuid","provinceid"],
+                    include: [
+                        {
+                            model: Provinces,
+                            as: "province",
+                            attributes: ["name_la","name_en", "_uuid"],
+                        }
+                    ]
+                },
+            ]
+        });
+        res.status(200).json({ data: customer });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch customer" });
+    }
+};
+
+
+export const searchCodeCustomer = async (req: Request<{}, {}, {}, QueryParams>, res: Response) => {
+    try {
+        const { shopid, types, codes } = req.body as any;
+        const whereConditions: any = {
+            shopid: shopid,
+            status: 1,
+        }
+        // ເບີໃນ DB ອາດເກັບເປັນ 8 ຫຼື 10 ຕົວ (ມີ 20 ນຳໜ້າ) → ທຽບ 8 ຕົວທ້າຍ
+        const digits = String(codes ?? "").replace(/\D/g, "");
+        if (digits) {
+            whereConditions[Op.and] = [
+                sqWhere(fn("RIGHT", col("codes"), 8), digits.slice(-8)),
+            ];
         }
         if (types) {
             whereConditions.types = types;

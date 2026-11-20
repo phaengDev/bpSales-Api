@@ -17,7 +17,10 @@ interface TransportationAttributes {
   branch_name?: string | null;
   cod?: number | null;
   balance?: number | null;
+  get_cod?: number | null;
   status_pay?: number | null;
+  print?: number | null;
+  notified?: number | null;
   status?: number | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
@@ -27,22 +30,25 @@ interface TransportationAttributes {
 type TransportationCreationAttributes = Optional<TransportationAttributes, "_uuid">;
 export class Transportation extends Model<TransportationAttributes, TransportationCreationAttributes>
   implements TransportationAttributes {
-  public _uuid!: number;
-  public shopid!: number | null;
-  public codebill!: string | null;
-  public billsaleid!: number | null;
-  public companyid!: number | null;
-  public title!: Text | null;
-  public fullnames!: string | null;
-  public phone!: string | null;
-  public provinceid!: number | null;
-  public branch_name!: string | null;
-  public cod!: number | null;
-  public balance!: number | null;
-  public status_pay!: number | null;
-  public status!: number | null;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  declare _uuid: number;
+  declare shopid: number | null;
+  declare codebill: string | null;
+  declare billsaleid: number | null;
+  declare companyid: number | null;
+  declare title: Text | null;
+  declare fullnames: string | null;
+  declare phone: string | null;
+  declare provinceid: number | null;
+  declare branch_name: string | null;
+  declare cod: number | null; //== 1 ຈ່າຍແລ້ວ, 2 ຈ່າຍປາຍທາງ cod
+  declare balance: number | null;
+  declare get_cod: number | null;  //== 1 ຍັງບໍ່ໄດ້ຮັບເງິນ cod, 2 ໄດ້ຮັບເງິນ cod ແລ້ວ
+  declare status_pay: number | null; //== 1 ຄ່າຝາກຈ່າຍຕົ້ນທາງ, 2 ຄ່າຝາກຈ່າຍປາຍທາງ
+  declare print: number | null; //== 1 ຍັງບໍ່ໄດ້ພີມບິນ, 2 ພີມບິນແລ້ວ
+  declare notified: number | null;  //== 1 ຍັງບໍ່ໄດ້ແຈ້ງລູກຄ້າ, 2 ແຈ້ງແລະສົ່ງບິນໃຫ້ລູກຄ້າແລ້ວ, 3 ລູກຄ້າຮັບເຄື່ອງແລໍ້ວ 
+  declare status: number | null;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
 }
 
 // Define model
@@ -97,9 +103,24 @@ Transportation.init(
       type: DataTypes.DECIMAL(12, 2),
       allowNull: true,
     },
+    get_cod: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+    },
     status_pay: {
       type: DataTypes.INTEGER,
       allowNull: true,
+    },
+    print: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+    },
+    notified: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
     },
     status: {
       type: DataTypes.INTEGER,

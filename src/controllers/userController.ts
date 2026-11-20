@@ -2,7 +2,18 @@ import { Request, Response } from "express";
 import Users from "../models/Users.Model";
 import Shops from "../models/Shops.Model";
 import { verifyFacebookToken } from "../middleware/auth";
-import { maxid } from "../utils";
+import { maxid, url } from "../utils";
+import { deleteFile } from "../utils/uploadFile";
+import { fn, col, literal } from "sequelize";
+
+/** ໂຟນເດີເກັບຮູບໂປຣໄຟລ໌ — ໃຊ້ຮ່ວມກັບລູກຄ້າ (uploads/profile) */
+const PROFILE_FOLDER = "profile";
+
+/** ຄ່າ url ເຕັມຂອງຮູບໂປຣໄຟລ໌ ສົ່ງໃຫ້ໜ້າເວັບໃຊ້ໂດຍກົງ */
+const profileUrl = (): any => [
+  fn("CONCAT", literal(`'${url()}/${PROFILE_FOLDER}/'`), col("profiles")),
+  "url",
+];
 // import jwt from "jsonwebtoken";
 const bcrypt = require('bcryptjs');
 // const secret = process.env.JWT_SECRET || "OAC-Insurance@2026";
@@ -124,7 +135,7 @@ export const getMyProfile = async (req: Request, res: Response) => {
     if (!user_uuid) return res.status(401).json({ error: "Unauthorized" });
 
     const user = await Users.findByPk(user_uuid, {
-      attributes: { exclude: ["password"] },
+      attributes: { exclude: ["password"], include: [profileUrl()] },
       include: [{ model: Shops, as: "shop" }],
     });
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -163,6 +174,54 @@ export const updateMyPassword = async (req: Request, res: Response) => {
     res.status(200).json({ message: "Password updated successfully" });
   } catch (error) {
     res.status(500).json({ error: "Failed to update password" });
+  }
+};
+
+/** ອັບເດດຮູບໂປຣໄຟລ໌ — ອັບໂຫຼດໄຟລ໌ໃໝ່ ແລະ ລຶບໄຟລ໌ເກົ່າອອກ */
+export const updateMyAvatar = async (req: Request, res: Response) => {
+  try {
+    const user_uuid = req.user?.sub;
+    if (!user_uuid) return res.status(401).json({ error: "Unauthorized" });
+
+    const images = req.file?.filename;
+    if (!images) return res.status(400).json({ error: "Image file is required" });
+
+    const user = await Users.findByPk(user_uuid);
+    if (!user) {
+      // ບັນທຶກຜູ້ໃຊ້ບໍ່ມີ — ຢ່າປະໄຟລ໌ຄ້າງໄວ້ໃນເຊີບເວີ
+      deleteFile(PROFILE_FOLDER, images);
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const oldImage = user.getDataValue("profiles");
+    await user.update({ profiles: images, updatedAt: new Date() });
+    if (oldImage) deleteFile(PROFILE_FOLDER, oldImage);
+
+    res.status(200).json({
+      message: "Profile image updated successfully",
+      data: { profiles: images, url: `${url()}/${PROFILE_FOLDER}/${images}` },
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update profile image" });
+  }
+};
+
+/** ລຶບຮູບໂປຣໄຟລ໌ ກັບໄປໃຊ້ຮູບຕັ້ງຕົ້ນ */
+export const deleteMyAvatar = async (req: Request, res: Response) => {
+  try {
+    const user_uuid = req.user?.sub;
+    if (!user_uuid) return res.status(401).json({ error: "Unauthorized" });
+
+    const user = await Users.findByPk(user_uuid);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const oldImage = user.getDataValue("profiles");
+    await user.update({ profiles: null, updatedAt: new Date() });
+    if (oldImage) deleteFile(PROFILE_FOLDER, oldImage);
+
+    res.status(200).json({ message: "Profile image removed successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to remove profile image" });
   }
 };
 

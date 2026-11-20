@@ -3,7 +3,29 @@ import {verifyToken, login, loginWithFacebook, linkFacebook } from "../middlewar
 import { createUpload } from "../utils/uploadFile";
 import {getProvince, getDistrict, getCountry,
   getCompany,
-getShops} from "../controllers/addressController";
+getShops,
+updateShop,
+updateShopLogo,
+deleteShopLogo,
+updateShopQr,
+deleteShopQr} from "../controllers/addressController";
+
+// ======import bill setting controller
+import {
+  getBillSetting,
+  saveBillSetting,
+  updateBillLogo,
+  deleteBillLogo
+} from "../controllers/billSettingController";
+
+// ======import printer controller
+import {
+  getPrinters,
+  getMyPrinters,
+  createPrinter,
+  updatePrinter,
+  deletePrinter
+} from "../controllers/printerController";
 
 import {
   createExchange,
@@ -20,7 +42,9 @@ import {
   getMyProfile,
   updateMyPassword,
   connectFacebook,
-  disconnectFacebook
+  disconnectFacebook,
+  updateMyAvatar,
+  deleteMyAvatar
 } from "../controllers/userController";
 // ======import supplier controller
 import {
@@ -38,6 +62,7 @@ import {
   deleteCustomer,
   getCustomerOption,
   searchCustomer,
+  searchCodeCustomer,
   updateCustomerStatus
 } from "../controllers/customerController";
 
@@ -133,7 +158,8 @@ import {createBillsale,
   cancleBillsale,
   fetchBillCancel,
   closeSaleDaily} from "../controllers/billsaleController";
-import {getTransportation} from "../controllers/transonrtation";
+import {getTransportation, updatePrintStatus, updateNotifiedStatus, updateGetCodStatus} from "../controllers/transonrtation";
+import {createOffSale, getOffSales, getOffSaleById, cancelOffSale} from "../controllers/offSales.Controller";
 // ========== import billsale
 import {createImport,getImportAll} from "../controllers/importController";
 import {createPurchase,
@@ -156,6 +182,8 @@ import {
   getLiveOrder,
   cancelLiveOrder,
   getLiveReport} from "../controllers/liveController";
+
+  import { createBank, updateBank, deleteBank, fetchBank,getBankOption} from "../controllers/bankController";
 // =========== Transportation
 const router = Router();
 router.post("/auth/login", login);
@@ -170,6 +198,37 @@ router.get("/verify",verifyToken);
 
 router.use(verifyToken);
 router.get("/shop/:id",getShops);
+router.put("/shop/:id",updateShop);
+// ===== ຮູບຂອງຮ້ານ: ໂລໂກ້ ແລະ QR ຮັບເງິນ
+router.post("/shop/:id/logo", createUpload("logo").single("logo"), updateShopLogo);
+router.delete("/shop/:id/logo", deleteShopLogo);
+router.post("/shop/:id/qr", createUpload("QR").single("bank_qr"), updateShopQr);
+router.delete("/shop/:id/qr", deleteShopQr);
+// ========== Bank routes
+// logo = ໂລໂກ້ທະນາຄານ, qr (ຫຼື bank) = ຮູບ QR — ເກັບໄວ້ໂຟນເດີ bank ຄືກັນ (/image/bank/<file>)
+const bankUpload = createUpload('bank').fields([
+  { name: "logo", maxCount: 1 },
+  { name: "qr", maxCount: 1 },
+  { name: "bank", maxCount: 1 },
+]);
+router.post("/bank/create", bankUpload, createBank);
+router.put("/bank/:id", bankUpload, updateBank);
+router.delete("/bank/:id", deleteBank);
+router.get("/bank/fetch/:id", fetchBank);
+router.get("/bank/:id", getBankOption);
+
+// ===== ປຣີນເຕີຂອງຮ້ານ (ຫຼາຍໜ່ວຍ / ຜູກຕາມຜູ້ໃຊ້ໄດ້)
+router.get("/printer/fetch/:id", getPrinters);
+router.get("/printer/mine/:id", getMyPrinters);
+router.post("/printer/create", createPrinter);
+router.put("/printer/:id", updatePrinter);
+router.delete("/printer/:id", deletePrinter);
+
+// ===== ຮູບແບບບິນ (ຄ່າພື້ນຖານຂອງຮ້ານ)
+router.get("/setting/bill/:id", getBillSetting);
+router.put("/setting/bill/:id", saveBillSetting);
+router.post("/setting/bill/:id/logo", createUpload("logo").single("logo"), updateBillLogo);
+router.delete("/setting/bill/:id/logo", deleteBillLogo);
 // ===== User routes
 router.get("/user/fetch/:id", getUsers);
 router.get("/user/:id", getUserById);
@@ -182,6 +241,8 @@ router.get("/user/profile/me", getMyProfile);
 router.put("/user/profile/password", updateMyPassword);
 router.post("/user/profile/facebook", connectFacebook);
 router.delete("/user/profile/facebook", disconnectFacebook);
+router.post("/user/profile/avatar", createUpload("profile").single("profiles"), updateMyAvatar);
+router.delete("/user/profile/avatar", deleteMyAvatar);
 // ====================
 router.get("/exchange/fetch/:id", getExchange);
 router.post("/exchange/create", createExchange);
@@ -196,6 +257,7 @@ router.delete("/supplier/:id", deleteSupplier);
 router.post("/customer/fetch", getCustomer);
 router.post("/customer/option/", getCustomerOption);
 router.post("/customer/search", searchCustomer);
+router.post("/customer/fetch/code", searchCodeCustomer);
 router.post("/customer/create", createUpload("profile").single("profiles"), createCustomer);
 router.put("/customer/:id", createUpload("profile").single("profiles"), updateCustomer);
 router.delete("/customer/:id", deleteCustomer);
@@ -290,9 +352,17 @@ router.post("/billsale/fetch/list", fetchSaleList);
 router.post("/billsale/search", searchBillSale);
 router.put("/billsale/cancel/:id", cancleBillsale);
 router.post("/billsale/fetch/cancel", fetchBillCancel);
-router.put("/billsale/offsale", closeSaleDaily);
+router.put("/billsale/offsale", createOffSale);
+// ========= OffSale routes (ປິດຍອດ)
+router.post("/offsale/create", createOffSale);
+router.post("/offsale/fetch", getOffSales);
+router.get("/offsale/:id", getOffSaleById);
+router.put("/offsale/cancel/:id", cancelOffSale);
 // ========= Transportation routes
 router.post("/online/fetch", getTransportation);
+router.put("/online/print", updatePrintStatus);
+router.put("/online/notified", updateNotifiedStatus);
+router.put("/online/getcod", updateGetCodStatus);
 
 // ======= Live CF routes
 router.post("/live/create", createLiveSession);

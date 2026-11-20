@@ -12,6 +12,7 @@ interface BillsaleListAttributes {
   discount?: number | null;
   quantity?: number | null;
   free?: number | null;
+  typesale?: number | null;
   status?: number | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
@@ -30,6 +31,7 @@ export class BillsaleList extends Model<BillsaleListAttributes, BillsaleListCrea
   declare discount: number | null;
   declare quantity: number | null;
   declare free: number | null;
+  declare typesale: number | null;
   declare status: number | null;
   declare readonly createdAt: Date;
   declare readonly updatedAt: Date;
@@ -74,6 +76,11 @@ BillsaleList.init(
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: 0,
+    },
+    typesale: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 1,
     },
     status: {
       type: DataTypes.INTEGER,

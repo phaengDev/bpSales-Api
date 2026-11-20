@@ -127,7 +127,7 @@ export const createBillsale = async (req: Request, res: Response) => {
 
             await BillsaleList.create(
                 {
-                    _uuid:list_uuid,
+                    _uuid: list_uuid,
                     billsaleid: new_uuid,
                     productid,
                     price_buy: priceBuy,
@@ -135,6 +135,7 @@ export const createBillsale = async (req: Request, res: Response) => {
                     discount,
                     quantity,
                     free,
+                    typesale: 1,
                     status: 1,
                 },
                 { transaction: t }
@@ -194,84 +195,113 @@ export const createBillsale = async (req: Request, res: Response) => {
 };
 
 export const createOnline = async (req: Request, res: Response) => {
-    try {
-        const { orderList } = req.body as any;
-        const new_uuid = await maxid(Billsales, "bill_uuid");
-        const whshopid = { shopid: req.body.shopid };
-        const newCode = await maxCode(Billsales, "billcode", "BIL", whshopid);
-        const newNo = await codeNo(Billsales, "billno", `${days}0`);
-        req.body.bill_uuid = new_uuid;
-        req.body.billcode = newCode;
-        req.body.billno = newNo;
+    const {
+        orderList,
+        companyid,
+        title,
+        fullnames,
+        phone,
+        provinceid,
+        typepay,
+        cod,
+        balance,
+        get_cod,
+        branch_name,
+        ...billValues
+    } = req.body as any;
 
-        const billsale = await Billsales.create(req.body);
-        if (billsale) {
-            for (const item of orderList) {
-                const _uuid = await maxid(BillsaleList, "_uuid");
-                const result = await BillsaleList.create({
+    if (!Array.isArray(orderList) || orderList.length === 0) {
+        return res.status(400).json({ error: "orderList is required" });
+    }
+    if (!companyid) {
+        return res.status(400).json({ error: "companyid is required" });
+    }
+
+    // ບິນ + ລາຍການ + ຂໍ້ມູນຂົນສົ່ງ ຕ້ອງສຳເລັດພ້ອມກັນ ຫຼື ບໍ່ບັນທຶກຫຍັງເລີຍ
+    const t = await Billsales.sequelize?.transaction();
+    try {
+        const new_uuid = await maxid(Billsales, "bill_uuid", { transaction: t });
+        const whshopid = { shopid: billValues.shopid };
+        const newCode = await maxCode(Billsales, "billcode", "BIL", whshopid, t);
+        const newNo = await codeNo(Billsales, "billno", `${days}0`);
+
+        const billsale = await Billsales.create(
+            {
+                ...billValues,
+                bill_uuid: new_uuid,
+                billcode: newCode,
+                billno: newNo,
+            },
+            { transaction: t }
+        );
+
+        for (const item of orderList) {
+            const _uuid = await maxid(BillsaleList, "_uuid", { transaction: t });
+            await BillsaleList.create(
+                {
                     _uuid: _uuid,
                     billsaleid: new_uuid,
                     productid: item.productid,
                     price_buy: item.price_buy,
                     price_sales: item.price_sales,
                     quantity: item.quantity,
+                    typesale: 2,
                     status: 1,
-                });
-                if (!result) {
-                    return res.status(500).json({ error: "Failed to create BillsaleList" });
-                }
-                if (item.stock === 1) {
-                    await Products.update(
-                        { quantity: literal(`quantity - ${item.quantity}`) },
-                        { where: { product_uuid: item.productid } }
-                    )
-                }
-                await CartOrder.destroy({ where: { cart_uuid: item.cart_uuid } });
-            }
-
-            const {
-                companyid,
-                shopid,
-                title,
-                fullnames,
-                phone,
-                provinceid,
-                typepay,
-                cod,
-                balance,
-                branch_name,
-            } = req.body;
-            const online_uuid = await maxid(Transportation, "_uuid");
-            const newNo = await codeNo(Transportation, "codebill", `${codes}0`);
-            const transportation = await Transportation.create(
-                {
-                    _uuid: online_uuid,
-                    shopid: shopid,
-                    codebill: newNo,
-                    billsaleid: new_uuid,
-                    companyid: companyid,
-                    title: title,
-                    fullnames: fullnames,
-                    phone: phone,
-                    provinceid: provinceid,
-                    branch_name: branch_name,
-                    cod: cod,
-                    balance: balance,
-                    status_pay: typepay,
-                }
+                },
+                { transaction: t }
             );
 
-            if (!billsale) return res.status(404).json({ error: "Billsale not found" });
-            res.status(200).json({
-                message: "Billsale created successfully",
-                data: billsale,
-                billid: new_uuid,
-                onlineid: online_uuid,
-                transportation,
-            });
+            if (item.stock === 1) {
+                await Products.update(
+                    { quantity: literal(`quantity - ${item.quantity}`) },
+                    { where: { product_uuid: item.productid }, transaction: t }
+                );
+            }
+            if (item.cart_uuid) {
+                await CartOrder.destroy({ where: { cart_uuid: item.cart_uuid }, transaction: t });
+            }
         }
+
+        const online_uuid = await maxid(Transportation, "_uuid", { transaction: t });
+        const codebill = await codeNo(Transportation, "codebill", `${codes}0`);
+        const transportation = await Transportation.create(
+            {
+                _uuid: online_uuid,
+                shopid: billValues.shopid,
+                codebill: codebill,
+                billsaleid: new_uuid,
+                companyid: companyid,
+                title: title,
+                fullnames: fullnames,
+                phone: phone,
+                // provinceid ເປັນ INT — ຄ່າວ່າງຈາກ frontend ຕ້ອງເປັນ null
+                provinceid: provinceid ? Number(provinceid) : null,
+                branch_name: branch_name,
+                cod: cod,
+                balance: balance,
+                // ສະຖານະຮັບເງິນ COD — ບິນໃໝ່ເລີ່ມທີ່ 1 (ຍັງບໍ່ໄດ້ຮັບເງິນ)
+                get_cod: Number(get_cod) === 2 ? 2 : 1,
+                status_pay: typepay,
+                print: 1,
+                status: 1,
+            },
+            { transaction: t }
+        );
+
+        await t?.commit();
+        return res.status(200).json({
+            message: "Billsale created successfully",
+            data: billsale,
+            billid: new_uuid,
+            onlineid: online_uuid,
+            transportation,
+        });
     } catch (error) {
-        res.status(500).json({ error: "Failed to create Billsale" });
+        await t?.rollback();
+        console.error("Failed to create Billsale (online):", error);
+        return res.status(500).json({
+            error: error instanceof Error ? error.message : "Failed to create Billsale",
+        });
     }
 };
 
@@ -506,7 +536,7 @@ export const getSalebyid = async (req: Request<{ id: string }>, res: Response) =
                 }
             ]
         });
-        res.status(200).json({data: result });
+        res.status(200).json({ data: result });
     } catch (error) {
         res.status(500).json({ error: "Failed to fetch Billsale" });
     }
@@ -743,7 +773,7 @@ export const fetchBillCancel = async (
             offset: skip,
             order: [[orderBy, order]],
             include: [
-                 {
+                {
                     model: Country,
                     as: "country",
                     attributes: ["abbr", "icons", "genus"],
@@ -773,7 +803,7 @@ export const fetchBillCancel = async (
         // const data = rows.map(formatBillsaleTransport);
 
         res.status(200).json({
-            data:rows,
+            data: rows,
             total: count,
             limit,
             skip

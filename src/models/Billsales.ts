@@ -26,6 +26,7 @@ interface BillsalesAttributes {
   status?: number | null;
   description?: string | null;
   statusoff?: number | null;
+  offsaleid?: number | null;
   createby?: string | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
@@ -57,6 +58,7 @@ export class Billsales extends Model<BillsalesAttributes, BillsalesCreationAttri
   public status!: number | null;
   public description!: string | null;
   public statusoff!: number | null;
+  public offsaleid!: number | null;
   public createby!: string | null;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -104,8 +106,10 @@ Billsales.init(
       allowNull: true,
     },
     countryid: {
+      // ຄໍລຳນີ້ NOT NULL ໃນ DB ແລະ ບໍ່ມີ default → ຕ້ອງມີຄ່າສະເໝີ (1 = ₭ LAK)
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
+      defaultValue: 1,
     },
     rate: {
       type: DataTypes.INTEGER,
@@ -152,6 +156,12 @@ Billsales.init(
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: 1,
+    },
+    offsaleid: {
+      // ຄໍລຳນີ້ NOT NULL ໃນ DB ແລະ ບໍ່ມີ default → ຕ້ອງມີຄ່າສະເໝີ (0 = ຍັງບໍ່ໄດ້ປິດຍອດ)
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
     },
     createby: {
       type: DataTypes.INTEGER,

@@ -8,6 +8,7 @@ interface UserAttributes {
   // ID ຈາກ Facebook ຍາວເກີນ INT (ຮອດ 17 ຕົວເລກ) — ຕ້ອງເກັບເປັນ string
   facebookid?: string | null;
   userName?: string | null;
+  profiles?: string | null;
   phone?: string | null;
   password?: string | null;
   typeuser?: number | null;
@@ -28,6 +29,7 @@ export class Users extends Model<UserAttributes, UserCreationAttributes>
   declare shopid: number | null;
   declare facebookid: string | null;
   declare userName: string | null;
+  declare profiles: string | null;
   declare phone: string | null;
   declare password: string | null;
   declare typeuser: number | null;
@@ -56,6 +58,10 @@ Users.init(
       allowNull: true,
     },
     userName: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    profiles: {
       type: DataTypes.STRING(255),
       allowNull: true,
     },

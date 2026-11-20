@@ -6,10 +6,14 @@ interface ShopsAttributes {
   shop_uuid: number;
   logo?: string | null;
   shopName?: string | null;
-  phone?: number | null;
+  phone?: string | null;
+  email?: string | null;
   village?: string | null;
   districtid?: number | null;
+  /** ເລກປະຈຳຕົວຜູ້ເສຍອາກອນ — ສະແດງຢູ່ຫົວບິນ */
+  taxNumber?: string | null;
   description?: string | null;
+  bank_qr?: string | null;
   status?: number | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
@@ -20,17 +24,20 @@ type ShopsCreationAttributes = Optional<ShopsAttributes, "shop_uuid">;
 
 export class Shops extends Model<ShopsAttributes, ShopsCreationAttributes>
   implements ShopsAttributes {
-  public shop_uuid!: number;
-  public logo!: string | null;
-  public shopid!: number | null;
-  public shopName!: string | null;
-  public phone!: number | null;
-  public village!: string | null;
-  public districtid!: number | null;
-  public description!: string | null;
-  public status!: number | null;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  declare shop_uuid: number;
+  declare logo: string | null;
+  declare shopid: number | null;
+  declare shopName: string | null;
+  declare phone: string | null;
+  declare email: string | null;
+  declare village: string | null;
+  declare districtid: number | null;
+  declare taxNumber: string | null;
+  declare description: string | null;
+  declare bank_qr: string | null;
+  declare status: number | null;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
 }
 
 // Define model
@@ -45,8 +52,20 @@ Shops.init(
       type: DataTypes.STRING(255),
       allowNull: true,
     },
+    logo: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    bank_qr: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
     phone: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
+    email: {
+      type: DataTypes.STRING(255),
       allowNull: true,
     },
     village: {
@@ -55,6 +74,10 @@ Shops.init(
     },
     districtid: {
       type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    taxNumber: {
+      type: DataTypes.STRING(50),
       allowNull: true,
     },
     description: {

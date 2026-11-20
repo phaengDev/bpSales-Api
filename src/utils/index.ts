@@ -106,17 +106,19 @@ export async function maxCode(
   ) as WhereOptions;
 
   // 🔹 นับเฉพาะ prefix เดียวกัน (กันเลขของ prefix อื่นมาปน)
-  const prefixWhere: WhereOptions = { [column]: { [Op.like]: `${prefix}-%` } };
+  const prefixWhere: WhereOptions = { [column]: { [Op.like]: `${prefix}%` } };
   const finalWhere = { [Op.and]: [cleanWhere, prefixWhere] } as WhereOptions;
+
+  // 🔹 เลขท้ายของ code = ส่วนที่อยู่หลัง prefix (ตัด '-' ของข้อมูลเก่าออกด้วย)
+  //    เรียงแบบตัวเลข ไม่ใช่ string — กัน 'CAT-0012' (8 ตัว) ชนะ 'CAT0013' (7 ตัว)
+  const numericSuffix = Sequelize.literal(
+    `CAST(REPLACE(SUBSTRING(\`${column}\`, ${prefix.length + 1}), '-', '') AS UNSIGNED)`
+  );
 
   const lastRow = await model.findOne({
     attributes: [column],
     where: finalWhere,
-    // เรียงตามความยาวก่อน เพื่อให้ '10000' > '9999' (string sort จะได้ไม่ผิด)
-    order: [
-      [Sequelize.fn("CHAR_LENGTH", Sequelize.col(column)), "DESC"],
-      [column, "DESC"],
-    ],
+    order: [[numericSuffix, "DESC"]],
     transaction,
     ...(transaction ? { lock: transaction.LOCK.UPDATE } : {}),
     raw: true,
@@ -124,8 +126,8 @@ export async function maxCode(
 
   const lastCode = (lastRow as any)?.[column] as string | undefined;
   // ตัด prefix ออกก่อน แล้วค่อยอ่านเลขท้าย (prefix ที่มีตัวเลข เช่น '260822' จะได้ไม่ถูกนับ)
-  const suffix = lastCode ? lastCode.slice(prefix.length + 1).replace(/\D/g, "") : "";
+  const suffix = lastCode ? lastCode.slice(prefix.length).replace(/\D/g, "") : "";
   const nextNumber = (parseInt(suffix, 10) || 0) + 1;
   const formattedNumber = nextNumber.toString().padStart(4, "0"); // '0001'
-  return `${prefix}-${formattedNumber}`;
+  return `${prefix}${formattedNumber}`;
 }

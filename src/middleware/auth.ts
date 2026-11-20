@@ -146,6 +146,13 @@ export const verifyFacebookToken = async (accessToken: string): Promise<Facebook
     if (!facebookId) facebookId = String(me?.id ?? "");
     if (!facebookId) return { ok: false, status: 401, message: "Invalid Facebook token" };
 
+    // ⚠️ ຖ້າ token ເປັນ App Token (ບໍ່ແມ່ນຂອງຜູ້ໃຊ້) /me ຈະຕອບກັບເປັນຕົວແອັບເອງ
+    // ຈຶ່ງໄດ້ id ເທົ່າກັບ App ID — ຢ່າຍອມຮັບ ບໍ່ດັ່ງນັ້ນຈະຜູກຄ່າຜິດເຂົ້າ DB
+    // ແລ້ວ login ດ້ວຍ Facebook ຈະຫາຜູ້ໃຊ້ບໍ່ພົບຕະຫຼອດ
+    if (facebookId === FACEBOOK_APP_ID) {
+      return { ok: false, status: 401, message: "Not a user access token" };
+    }
+
     return { ok: true, facebookId, name: me?.name ?? null };
   } catch (e) {
     console.error("Facebook verify error:", e);
